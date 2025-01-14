@@ -1,5 +1,12 @@
+"use client";
+
+import { WebGLCurve } from "easyplot";
+
 export default function Home() {
   return (
-    <div>Hello world</div>
+    <div>
+      Hello world
+      <WebGLCurve />
+    </div>
   );
 }

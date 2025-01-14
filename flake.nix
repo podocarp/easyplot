@@ -15,6 +15,7 @@
             pkgs.mkShell {
               nativeBuildInputs = with pkgs; [
                 nodejs_20
+                nodejs_20.pkgs.pnpm
               ];
               shellHook = '''';
               ESLINT_USE_FLAT_CONFIG = "false";
