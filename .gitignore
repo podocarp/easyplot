@@ -129,3 +129,4 @@ out
 .pnp.*
 
 .direnv
+src/dist
