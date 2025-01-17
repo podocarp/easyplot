@@ -1,12 +1,15 @@
 "use client";
 
-import { WebGLCurve } from "easyplot";
+import { Curve2D, Curve2DCurve, Curve2DGrid } from "easyplot";
 
 export default function Home() {
   return (
     <div>
       Hello world
-      <WebGLCurve />
+      <Curve2D>
+        <Curve2DGrid />
+        <Curve2DCurve />
+      </Curve2D>
     </div>
   );
 }
