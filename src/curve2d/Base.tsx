@@ -5,11 +5,12 @@ export type Curve2DState = {
   canvas: HTMLCanvasElement;
 
   isDragging: boolean;
-  /** Simply put, this is the position of the origin. Changed when dragging. */
+  /** Simply put, this is the offset position of the origin in pixels, when the
+   * scale is 1. */
   translation: [number, number];
   lastMousePosition: [number, number];
-  /** A scale of `n` implies that there should be `n` y-coordinate grid ticks
-   * visible on the canvas. */
+  /** A scale of n implies the top y coordinate is 1/n and bottom is -1/n if
+   * everything is centered. */
   scale: number;
 };
 
@@ -87,7 +88,7 @@ export function Curve2D({ children }: { children: React.ReactNode }) {
       isDragging: false,
       translation: [0, 0],
       lastMousePosition: [0, 0],
-      scale: 1,
+      scale: 0.1,
     };
 
     render();
@@ -119,8 +120,11 @@ export function Curve2D({ children }: { children: React.ReactNode }) {
             const [lastX, lastY] = curveState.current.lastMousePosition;
             const deltaX = event.clientX - lastX;
             const deltaY = event.clientY - lastY;
-            curveState.current.translation[0] += deltaX;
-            curveState.current.translation[1] -= deltaY;
+            curveState.current.translation[0] +=
+              deltaX / curveState.current.scale;
+            curveState.current.translation[1] -=
+              deltaY / curveState.current.scale;
+
             curveState.current.lastMousePosition = [
               event.clientX,
               event.clientY,

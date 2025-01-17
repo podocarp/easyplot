@@ -29,8 +29,8 @@ const gridFragmentShader = `
             return;
       }
 
-      float gridSpacing = u_resolution.y * u_scale / 2.0;
-      vec2 grid = mod(pos, gridSpacing);
+      float pixelsPerUnit = u_resolution.y * u_scale / 2.0;
+      vec2 grid = mod(pos, pixelsPerUnit);
       if ((-thickness <= grid.x && grid.x <= thickness)
         || (-thickness <= grid.y && grid.y <= thickness)) {
             gl_FragColor = vec4(0.5, 0.5, 0.5, 1.0);

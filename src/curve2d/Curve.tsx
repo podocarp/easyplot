@@ -9,10 +9,10 @@ const curveVertexShader = `
     uniform float u_scale;
 
     void main() {
-      vec2 worldCoords = a_position * u_resolution / 2.0;
-      vec2 actualCoords = worldCoords + u_translation;
-      actualCoords *= u_scale;
-      vec2 pos = actualCoords / (u_resolution / 2.0);
+      float pixelsPerUnit = u_resolution.y / 2.0 * u_scale;
+      vec2 pixelCoords = a_position * pixelsPerUnit;
+      vec2 actualCoords = pixelCoords + u_translation * u_scale;
+      vec2 pos = actualCoords / u_resolution * 2.0;
 
       gl_Position = vec4(pos, 0, 1);
     }
@@ -25,20 +25,44 @@ const curveFragmentShader = `
     }
 `;
 
-export function Curve2DCurve() {
+export function Curve2DCurve({
+  fun,
+  steps = 100,
+}: {
+  /** The function to plot */
+  fun: (x: number) => number;
+  steps?: number;
+}) {
   const ctx = useContext(Curve2DContext);
 
   const render = (program: WebGLProgram, state: Curve2DState) => {
     if (!program) {
       return;
     }
-    const { gl } = state;
+    const {
+      gl,
+      translation: [transx],
+      scale,
+    } = state;
+    const canvasWidthHalf = gl.canvas.width / 2;
+    const canvasHeightHalf = gl.canvas.height / 2;
+
     gl.useProgram(program);
     _setUniforms(program, state);
 
+    // number of pixels that make up one unit (grid square) on the graph
+    const pixelsPerUnit = canvasHeightHalf * scale;
+    const transInPixels = (transx * scale) / pixelsPerUnit;
+    const xRangeInUnits = [
+      -canvasWidthHalf / pixelsPerUnit - transInPixels,
+      canvasWidthHalf / pixelsPerUnit - transInPixels,
+    ];
+
     const points = [];
-    for (let x = -1; x <= 1; x += 0.01) {
-      const y = Math.sin(2 * Math.PI * x);
+    const stepsize = (xRangeInUnits[1] - xRangeInUnits[0]) / steps;
+    for (let i = 0; i < steps; i++) {
+      const x = xRangeInUnits[0] + stepsize * i;
+      const y = fun(x);
       points.push(x, y);
     }
 

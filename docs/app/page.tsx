@@ -8,7 +8,7 @@ export default function Home() {
       Hello world
       <Curve2D>
         <Curve2DGrid />
-        <Curve2DCurve />
+        <Curve2DCurve fun={(x) => Math.atan(x)} />
       </Curve2D>
     </div>
   );
