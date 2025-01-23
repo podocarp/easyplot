@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import { createPreset } from "fumadocs-ui/tailwind-plugin";
 
 export default {
   content: [
@@ -6,6 +7,8 @@ export default {
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  darkMode: "class",
+  presets: [createPreset()],
   theme: {
     extend: {
       colors: {

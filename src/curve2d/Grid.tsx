@@ -36,8 +36,7 @@ const gridFragmentShader = `
             gl_FragColor = vec4(0.5, 0.5, 0.5, 1.0);
             return;
       }
-
-      gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+      discard;
   }
 `;
 
@@ -79,7 +78,7 @@ export function Curve2DGrid() {
   };
 
   useEffect(() => {
-    ctx.registerRender("grid", factory);
+    ctx.registerRender("grid", -100, factory);
   });
 
   return <></>;

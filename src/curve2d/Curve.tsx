@@ -1,6 +1,7 @@
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useRef } from "react";
 import { _setUniforms, Curve2DContext, Curve2DState } from "./Base";
 import { createProgram } from "../lib/gl";
+import { Curve2DCrosshair } from "./Crosshair";
 
 const curveVertexShader = `
     attribute vec2 a_position;
@@ -14,7 +15,7 @@ const curveVertexShader = `
       vec2 actualCoords = pixelCoords + u_translation * u_scale;
       vec2 pos = actualCoords / u_resolution * 2.0;
 
-      gl_Position = vec4(pos, 0, 1);
+      gl_Position = vec4(pos, 1, 1);
     }
 `;
 
@@ -28,53 +29,48 @@ const curveFragmentShader = `
 export function Curve2DCurve({
   fun,
   steps = 100,
+  showCrosshair,
 }: {
   /** The function to plot */
   fun: (x: number) => number;
   steps?: number;
+  showCrosshair?: boolean;
 }) {
   const ctx = useContext(Curve2DContext);
+  const points = useRef<number[]>([]);
 
   const render = (program: WebGLProgram, state: Curve2DState) => {
     if (!program) {
       return;
     }
-    const {
-      gl,
-      translation: [transx],
-      scale,
-    } = state;
-    const canvasWidthHalf = gl.canvas.width / 2;
-    const canvasHeightHalf = gl.canvas.height / 2;
+    const { gl } = state;
 
     gl.useProgram(program);
     _setUniforms(program, state);
 
-    // number of pixels that make up one unit (grid square) on the graph
-    const pixelsPerUnit = canvasHeightHalf * scale;
-    const transInPixels = (transx * scale) / pixelsPerUnit;
-    const xRangeInUnits = [
-      -canvasWidthHalf / pixelsPerUnit - transInPixels,
-      canvasWidthHalf / pixelsPerUnit - transInPixels,
-    ];
+    const { xmax, xmin } = state.canvasRange;
 
-    const points = [];
-    const stepsize = (xRangeInUnits[1] - xRangeInUnits[0]) / steps;
+    points.current = [];
+    const stepsize = (xmax - xmin) / steps;
     for (let i = 0; i < steps; i++) {
-      const x = xRangeInUnits[0] + stepsize * i;
+      const x = xmin + stepsize * i;
       const y = fun(x);
-      points.push(x, y);
+      points.current.push(x, y);
     }
 
     const buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array(points.current),
+      gl.STATIC_DRAW
+    );
 
     const positionLocation = gl.getAttribLocation(program, "a_position");
     gl.enableVertexAttribArray(positionLocation);
     gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
 
-    gl.drawArrays(gl.LINE_STRIP, 0, points.length / 2);
+    gl.drawArrays(gl.LINE_STRIP, 0, steps);
   };
 
   const factory = (state: Curve2DState) => {
@@ -87,8 +83,8 @@ export function Curve2DCurve({
   };
 
   useEffect(() => {
-    ctx.registerRender("curve", factory);
+    ctx.registerRender("curve", 0, factory);
   });
 
-  return <></>;
+  return <>{showCrosshair && <Curve2DCrosshair points={points} />}</>;
 }
