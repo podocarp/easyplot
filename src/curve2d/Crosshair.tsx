@@ -2,7 +2,11 @@ import { useContext, useEffect } from "react";
 import { _setUniforms, Curve2DContext, Curve2DState } from "./Base";
 import { createProgram } from "../lib/gl";
 import { binSearchPointX } from "@/lib/curve2d/points";
-import { gridUnitsToClipSpace } from "@/lib/curve2d/coords";
+import {
+  clipSpaceToScreenSpace,
+  gridUnitsToClipSpace,
+} from "@/lib/curve2d/coords";
+import { drawTooltip } from "@/lib/curve2d/tooltip";
 
 const crosshairVertexShader = `
 attribute vec2 a_position;
@@ -50,6 +54,7 @@ export function Curve2DCrosshair({
       points.current,
       state.mouse.gridX
     );
+    const nearestX = points.current[nearestPointIndex];
     const nearestY = points.current[nearestPointIndex + 1];
     const [_, nearestYClip] = gridUnitsToClipSpace(state, 0, nearestY);
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
@@ -73,6 +78,15 @@ export function Curve2DCrosshair({
     gl.vertexAttribPointer(positionAttribute, 2, gl.FLOAT, false, 0, 0);
 
     gl.drawArrays(gl.LINES, 0, 4);
+
+    const [tx, ty] = clipSpaceToScreenSpace(state, mouse.clipX, nearestYClip);
+    drawTooltip(
+      state,
+      `(${nearestX !== undefined ? nearestX.toFixed(2) : "-"}, ${nearestY !== undefined ? nearestY.toFixed(2) : "-"})`,
+      tx,
+      ty,
+      4
+    );
   };
 
   const factory = (state: Curve2DState) => {

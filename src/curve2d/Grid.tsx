@@ -1,6 +1,7 @@
 import { useContext, useEffect } from "react";
 import { createProgram } from "../lib/gl";
 import { _setUniforms, Curve2DContext, Curve2DState } from "./Base";
+import { gridUnitsToScreenSpace } from "@/lib/curve2d/coords";
 
 const gridVertexShader = `
   attribute vec2 a_position;
@@ -43,6 +44,27 @@ const gridFragmentShader = `
 export function Curve2DGrid() {
   const ctx = useContext(Curve2DContext);
 
+  const drawTicks = (state: Curve2DState) => {
+    const { xmin, xmax, ymin, ymax } = state.canvasRange;
+    const { ctx2d } = state;
+    ctx2d.font = "12px sans-serif";
+    ctx2d.textAlign = "left";
+    for (let i = Math.floor(xmin); i <= Math.ceil(xmax); i++) {
+      const [x, y] = gridUnitsToScreenSpace(state, i, 0);
+      // magic numbers are some padding that seems to work fine
+      ctx2d.fillText("" + i, x + 5, y + 15);
+    }
+    ctx2d.textAlign = "right";
+    for (let i = Math.floor(ymin); i <= Math.ceil(ymax); i++) {
+      const [x, y] = gridUnitsToScreenSpace(state, 0, i);
+      if (i === 0) {
+        // only need one mark on the origin
+        continue;
+      }
+      ctx2d.fillText("" + i, x - 5, y);
+    }
+  };
+
   const render = (program: WebGLProgram, state: Curve2DState) => {
     const { gl } = state;
     gl.useProgram(program);
@@ -66,6 +88,8 @@ export function Curve2DGrid() {
     gl.vertexAttribPointer(positionAttribute, 2, gl.FLOAT, false, 0, 0);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    drawTicks(state);
   };
 
   const factory = (state: Curve2DState) => {

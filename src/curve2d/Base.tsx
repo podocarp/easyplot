@@ -1,11 +1,18 @@
 import { createContext, useRef } from "react";
 import { ZPainter } from "../lib/zpainter";
+import {
+  clipSpaceToGridUnits,
+  screenSpaceToClipSpace,
+} from "@/lib/curve2d/coords";
 
 export type Curve2DState = {
   gl: WebGLRenderingContext;
   /** The canvas the graph is drawn on. Prefer using this over gl.canvas since
    * it is typed more strictly. */
   canvas: HTMLCanvasElement;
+
+  ctx2d: CanvasRenderingContext2D;
+  canvas2d: HTMLCanvasElement;
 
   /** Simply put, this is the offset position of the origin in pixels, when the
    * scale is 1. When the scale is not 1 the offset becomes a little
@@ -27,14 +34,27 @@ export type Curve2DState = {
     gridX: number;
     /** Mouse position on the canvas in terms of grid unit coordinates. */
     gridY: number;
+    /** Mouse position on the canvas in terms of pixels with origin at top left
+     * corner. */
+    canvasX: number;
+    /** Mouse position on the canvas in terms of pixels with origin at top left
+     * corner. */
+    canvasY: number;
   };
 
-  /** Range of the current canvas view in terms of grid units. */
   canvasRange: {
+    /** Range of the current canvas view in terms of grid units. */
     xmax: number;
+    /** Range of the current canvas view in terms of grid units. */
     xmin: number;
+    /** Range of the current canvas view in terms of grid units. */
     ymax: number;
+    /** Range of the current canvas view in terms of grid units. */
     ymin: number;
+    /** Width of canvas. */
+    width: number;
+    /** Height of canvas. */
+    height: number;
   };
 
   _isDragging: boolean;
@@ -99,21 +119,25 @@ function updateCanvasRange(state: Curve2DState) {
 function updateMousePos(state: Curve2DState) {
   // clientXY is reported in screen space coordinates, not canvas space,
   // so we need to offset it by the canvas rect
-  const {
-    x: canvasX,
-    y: canvasY,
-    width,
-    height,
-  } = state.canvas.getClientRects()[0];
-  state.mouse.clipX = (state._lastMousePos[0] - canvasX) / (width / 2) - 1;
-  state.mouse.clipY = 1 - (state._lastMousePos[1] - canvasY) / (height / 2);
+  const { x: canvasX, y: canvasY } = state.canvas.getClientRects()[0];
+  state.mouse.canvasX = state._lastMousePos[0] - canvasX;
+  state.mouse.canvasY = state._lastMousePos[1] - canvasY;
 
-  // translate from (-1, 1) to (0, 1)
-  const mousex = (state.mouse.clipX + 1) / 2;
-  const mousey = (state.mouse.clipY + 1) / 2;
-  const { xmax, xmin, ymax, ymin } = state.canvasRange;
-  state.mouse.gridX = xmin + (xmax - xmin) * mousex;
-  state.mouse.gridY = ymin + (ymax - ymin) * mousey;
+  const [clipX, clipY] = screenSpaceToClipSpace(
+    state,
+    state.mouse.canvasX,
+    state.mouse.canvasY
+  );
+  state.mouse.clipX = clipX;
+  state.mouse.clipY = clipY;
+
+  const [gridX, gridY] = clipSpaceToGridUnits(
+    state,
+    state.mouse.clipX,
+    state.mouse.clipY
+  );
+  state.mouse.gridX = gridX;
+  state.mouse.gridY = gridY;
 }
 
 function handleDrag(state: Curve2DState, mouseX: number, mouseY: number) {
@@ -158,6 +182,8 @@ export function Curve2D({
   children: React.ReactNode;
 }) {
   const curveState = useRef<Curve2DState>(undefined);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvas2DRef = useRef<HTMLCanvasElement>(null);
 
   const painter = new ZPainter<Curve2DState>();
   const registerRender = (
@@ -173,15 +199,19 @@ export function Curve2D({
     if (!curveState.current) {
       return;
     }
-    const { gl } = curveState.current;
+    const { gl, ctx2d } = curveState.current;
     gl.clearColor(...bgColor);
     gl.clear(gl.COLOR_BUFFER_BIT);
+    ctx2d.clearRect(0, 0, ctx2d.canvas.width, ctx2d.canvas.height);
+    ctx2d.font = "12px sans-serif";
 
     painter.render(curveState.current);
   };
 
-  const callbackRef = (canvas: HTMLCanvasElement) => {
-    if (!canvas) {
+  const init = () => {
+    const canvas = canvasRef.current;
+    const canvas2d = canvas2DRef.current;
+    if (!canvas || !canvas2d) {
       return;
     }
 
@@ -189,12 +219,18 @@ export function Curve2D({
     if (!gl) {
       throw Error("WebGL not supported");
     }
+    const ctx2d = canvas2d.getContext("2d");
+    if (!ctx2d) {
+      throw Error("Canvas not supported!");
+    }
 
     painter.clear();
 
     curveState.current = {
       gl,
       canvas,
+      ctx2d,
+      canvas2d,
       _isDragging: false,
       translation: [0, 0],
       _lastMousePos: [0, 0],
@@ -210,6 +246,8 @@ export function Curve2D({
         xmin: 1.2,
         ymax: -1.2,
         ymin: 1.2,
+        width,
+        height,
       },
     };
 
@@ -221,10 +259,8 @@ export function Curve2D({
     <Curve2DContext.Provider
       value={{ state: curveState.current, registerRender: registerRender }}
     >
-      <canvas
-        ref={callbackRef}
-        width={width}
-        height={height}
+      <div
+        className="relative"
         onMouseDown={() => {
           if (!curveState.current) {
             return;
@@ -259,7 +295,25 @@ export function Curve2D({
         }}
       >
         {children}
-      </canvas>
+        <canvas
+          ref={(r) => {
+            canvasRef.current = r;
+            init();
+          }}
+          width={width}
+          height={height}
+          className="absolute top-0 left-0 z-0"
+        ></canvas>
+        <canvas
+          ref={(r) => {
+            canvas2DRef.current = r;
+            init();
+          }}
+          width={width}
+          height={height}
+          className="absolute top-0 left-0 z-10"
+        />
+      </div>
     </Curve2DContext.Provider>
   );
 }
