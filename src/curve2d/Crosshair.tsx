@@ -33,60 +33,59 @@ void main() {
 }
 `;
 
-export function Curve2DCrosshair({
-  points,
-}: {
-  /** An array of points, as a series of x1 y1 x2 y2 ... coordinates  */
-  points: React.RefObject<number[]>;
-}) {
+function drawLine(program: WebGLProgram, state: Curve2DState) {
+  const {
+    gl,
+    mouse: { clipX },
+  } = state;
+  gl.useProgram(program);
+  _setUniforms(program, state);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    new Float32Array([
+      clipX, // vertical line
+      -1,
+      clipX,
+      1,
+    ]),
+    gl.STATIC_DRAW
+  );
+
+  const positionAttribute = gl.getAttribLocation(program, "a_position");
+  gl.enableVertexAttribArray(positionAttribute);
+  gl.vertexAttribPointer(positionAttribute, 2, gl.FLOAT, false, 0, 0);
+  gl.drawArrays(gl.LINES, 0, 2);
+}
+
+function processPoints(state: Curve2DState, points: number[]) {
+  const {
+    mouse: { clipX },
+  } = state;
+  const nearestPointIndex = binSearchPointX(points, state.mouse.gridX);
+  const nearestX = points[nearestPointIndex];
+  const nearestY = points[nearestPointIndex + 1];
+  const [_, nearestYClip] = gridUnitsToClipSpace(state, 0, nearestY);
+
+  const [tx, ty] = clipSpaceToScreenSpace(state, clipX, nearestYClip);
+  drawTooltip(
+    state,
+    `(${nearestX !== undefined ? nearestX.toFixed(2) : "-"}, ${nearestY !== undefined ? nearestY.toFixed(2) : "-"})`,
+    tx,
+    ty,
+    4
+  );
+}
+
+export function Curve2DCrosshair() {
   const ctx = useContext(Curve2DContext);
 
   const render = (program: WebGLProgram, state: Curve2DState) => {
     if (!program) {
       return;
     }
-    const { gl, mouse } = state;
-
-    gl.useProgram(program);
-    _setUniforms(program, state);
-
-    const nearestPointIndex = binSearchPointX(
-      points.current,
-      state.mouse.gridX
-    );
-    const nearestX = points.current[nearestPointIndex];
-    const nearestY = points.current[nearestPointIndex + 1];
-    const [_, nearestYClip] = gridUnitsToClipSpace(state, 0, nearestY);
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-    gl.bufferData(
-      gl.ARRAY_BUFFER,
-      new Float32Array([
-        -1, // horizontal line
-        nearestYClip,
-        1,
-        nearestYClip,
-        mouse.clipX, // vertical line
-        -1,
-        mouse.clipX,
-        1,
-      ]),
-      gl.STATIC_DRAW
-    );
-
-    const positionAttribute = gl.getAttribLocation(program, "a_position");
-    gl.enableVertexAttribArray(positionAttribute);
-    gl.vertexAttribPointer(positionAttribute, 2, gl.FLOAT, false, 0, 0);
-
-    gl.drawArrays(gl.LINES, 0, 4);
-
-    const [tx, ty] = clipSpaceToScreenSpace(state, mouse.clipX, nearestYClip);
-    drawTooltip(
-      state,
-      `(${nearestX !== undefined ? nearestX.toFixed(2) : "-"}, ${nearestY !== undefined ? nearestY.toFixed(2) : "-"})`,
-      tx,
-      ty,
-      4
-    );
+    drawLine(program, state);
+    state._points.values().forEach((points) => processPoints(state, points));
   };
 
   const factory = (state: Curve2DState) => {

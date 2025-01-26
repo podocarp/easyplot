@@ -1,7 +1,6 @@
-import { useContext, useEffect, useRef } from "react";
+import { useContext, useEffect } from "react";
 import { _setUniforms, Curve2DContext, Curve2DState } from "./Base";
 import { createProgram } from "../lib/gl";
-import { Curve2DCrosshair } from "./Crosshair";
 
 const curveVertexShader = `
     attribute vec2 a_position;
@@ -29,42 +28,39 @@ const curveFragmentShader = `
 export function Curve2DCurve({
   fun,
   steps = 100,
-  showCrosshair,
+  id,
 }: {
   /** The function to plot */
   fun: (x: number) => number;
   steps?: number;
-  showCrosshair?: boolean;
+  id: string;
 }) {
   const ctx = useContext(Curve2DContext);
-  const points = useRef<number[]>([]);
+  const key = `curve-${id}`;
 
   const render = (program: WebGLProgram, state: Curve2DState) => {
     if (!program) {
       return;
     }
-    const { gl } = state;
+    const { gl, _points } = state;
 
     gl.useProgram(program);
     _setUniforms(program, state);
 
     const { xmax, xmin } = state.canvasRange;
 
-    points.current = [];
+    const points = [];
     const stepsize = (xmax - xmin) / steps;
     for (let i = 0; i < steps; i++) {
       const x = xmin + stepsize * i;
       const y = fun(x);
-      points.current.push(x, y);
+      points.push(x, y);
     }
+    _points.set(key, points);
 
     const buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(
-      gl.ARRAY_BUFFER,
-      new Float32Array(points.current),
-      gl.STATIC_DRAW
-    );
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
 
     const positionLocation = gl.getAttribLocation(program, "a_position");
     gl.enableVertexAttribArray(positionLocation);
@@ -83,8 +79,8 @@ export function Curve2DCurve({
   };
 
   useEffect(() => {
-    ctx.registerRender("curve", 0, factory);
+    ctx.registerRender(key, 0, factory);
   });
 
-  return <>{showCrosshair && <Curve2DCrosshair points={points} />}</>;
+  return <></>;
 }

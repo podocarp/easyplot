@@ -61,6 +61,8 @@ export type Curve2DState = {
   /** Mouse position on the canvas in pixels. You should not really need to use
    * this. Instead, consider using `mousePosition` . */
   _lastMousePos: [number, number];
+  /** The points to be displayed. */
+  _points: Map<string, number[]>;
 };
 
 export function _setUniforms(program: WebGLProgram, state: Curve2DState) {
@@ -232,13 +234,16 @@ export function Curve2D({
       ctx2d,
       canvas2d,
       _isDragging: false,
-      translation: [0, 0],
       _lastMousePos: [0, 0],
+      _points: new Map(),
+      translation: [0, 0],
       mouse: {
         clipX: 0,
         clipY: 0,
         gridX: 0,
         gridY: 0,
+        canvasX: 0,
+        canvasY: 0,
       },
       scale: 0.4,
       canvasRange: {
