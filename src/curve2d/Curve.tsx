@@ -20,23 +20,57 @@ const curveVertexShader = `
 
 const curveFragmentShader = `
     precision mediump float;
+    uniform vec4 u_color;
     void main() {
-      gl_FragColor = vec4(1, 0, 0, 1);
+      gl_FragColor = u_color;
     }
 `;
+
+const defaultColors = [
+  [1, 0, 0, 1],
+  [0, 1, 0, 1],
+  [0, 0, 1, 1],
+];
 
 export function Curve2DCurve({
   fun,
   steps = 100,
-  id,
+  color,
+  _id,
 }: {
-  /** The function to plot */
+  /** The function to plot. */
   fun: (x: number) => number;
+  /** The approximate number of points to plot.*/
   steps?: number;
-  id: string;
+  color?: [number, number, number, number];
+  _id?: number;
 }) {
   const ctx = useContext(Curve2DContext);
-  const key = `curve-${id}`;
+  const key = `curve-${_id}`;
+
+  let prevXmax = 0;
+  let prevXmin = 0;
+  let prevPoints: number[] = [];
+
+  const calcPoints = (xmin: number, xmax: number) => {
+    if (xmax === prevXmax && xmin === prevXmin) {
+      return prevPoints;
+    }
+
+    const points = [];
+    // approximate step size
+    const stepSize = (xmax - xmin) / steps;
+    for (let x = xmin; x <= xmax; x += stepSize) {
+      const y = fun(x);
+      points.push(x, y);
+    }
+
+    prevPoints = points;
+    prevXmax = xmax;
+    prevXmin = xmin;
+
+    return points;
+  };
 
   const render = (program: WebGLProgram, state: Curve2DState) => {
     if (!program) {
@@ -49,13 +83,7 @@ export function Curve2DCurve({
 
     const { xmax, xmin } = state.canvasRange;
 
-    const points = [];
-    const stepsize = (xmax - xmin) / steps;
-    for (let i = 0; i < steps; i++) {
-      const x = xmin + stepsize * i;
-      const y = fun(x);
-      points.push(x, y);
-    }
+    const points = calcPoints(xmin, xmax);
     _points.set(key, points);
 
     const buffer = gl.createBuffer();
@@ -70,11 +98,17 @@ export function Curve2DCurve({
   };
 
   const factory = (state: Curve2DState) => {
-    const program = createProgram(
-      state.gl,
-      curveVertexShader,
-      curveFragmentShader
-    );
+    const { gl } = state;
+    const program = createProgram(gl, curveVertexShader, curveFragmentShader);
+    gl.useProgram(program);
+    const colorLocation = gl.getUniformLocation(program, "u_color");
+    if (color) {
+      gl.uniform4fv(colorLocation, color);
+    } else {
+      const color = defaultColors[_id || 0 % defaultColors.length];
+      gl.uniform4fv(colorLocation, color);
+    }
+
     return () => render(program, state);
   };
 

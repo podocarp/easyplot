@@ -33,8 +33,8 @@ function Header() {
 
         <div style={{ width: 500, height: 500 }}>
           <Curve2D width={500} height={500} bgColor={[0.94, 0.98, 1.0, 1]}>
-            <Curve2DCurve fun={(x) => Math.sqrt(x ** 3 - x)} id="1" />
-            <Curve2DCurve fun={(x) => -Math.sqrt(x ** 3 - x)} id="2" />
+            <Curve2DCurve fun={(x) => Math.atan(x)} />
+            <Curve2DCurve fun={(x) => -Math.atan(x)} />
             <Curve2DCrosshair />
             <Curve2DGrid />
           </Curve2D>

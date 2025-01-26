@@ -1,4 +1,10 @@
-import { createContext, useRef } from "react";
+import {
+  Children,
+  createContext,
+  useRef,
+  cloneElement,
+  isValidElement,
+} from "react";
 import { ZPainter } from "../lib/zpainter";
 import {
   clipSpaceToGridUnits,
@@ -299,7 +305,12 @@ export function Curve2D({
           render();
         }}
       >
-        {children}
+        {Children.map(
+          children,
+          (child, i) =>
+            isValidElement(child) &&
+            cloneElement(child, { _id: i } as Partial<unknown>)
+        )}
         <canvas
           ref={(r) => {
             canvasRef.current = r;

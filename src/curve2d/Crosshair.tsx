@@ -39,7 +39,6 @@ function drawLine(program: WebGLProgram, state: Curve2DState) {
     mouse: { clipX },
   } = state;
   gl.useProgram(program);
-  _setUniforms(program, state);
   gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
   gl.bufferData(
     gl.ARRAY_BUFFER,
