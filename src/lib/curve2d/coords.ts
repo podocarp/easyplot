@@ -56,3 +56,7 @@ export function screenSpaceToClipSpace(
   const { width, height } = state.canvasRange;
   return [x / (width / 2) - 1, 1 - y / (height / 2)];
 }
+
+export function distSq(x1: number, y1: number, x2: number, y2: number) {
+  return (x1 - x2) ** 2 + (y1 - y2) ** 2;
+}

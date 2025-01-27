@@ -9,36 +9,24 @@ export function drawTooltip(
   canvasX: number,
   canvasY: number,
   padding: number = 0,
-  offset: number = 0
+  offsetX: number = 0,
+  offsetY: number = 0
 ) {
-  const {
-    ctx2d,
-    canvasRange: { width, height },
-  } = state;
+  const { ctx2d } = state;
   ctx2d.textAlign = "left";
   ctx2d.font = "14px sans-serif";
   ctx2d.textBaseline = "top";
   const tooltipWidth = ctx2d.measureText(text).width + 2 * padding;
   const tooltipHeight = 14 * 1.25 + 2 * padding; // this seems to work fine
 
-  let x = canvasX;
-  let y = canvasY;
+  const x = canvasX;
+  const y = canvasY;
 
-  const botLeftOOB = canvasY + tooltipHeight > height;
-  const topRightOOB = canvasX + tooltipWidth > width;
-  const botRightOOB = canvasY + tooltipHeight > height;
-
-  if (topRightOOB && botRightOOB) {
-    x = x - tooltipWidth;
-    y = y - tooltipHeight;
-  } else if (topRightOOB) {
-    x = x - tooltipWidth - padding;
-  } else if (botLeftOOB) {
-    y = y - tooltipHeight - padding;
-  }
-
-  ctx2d.fillStyle = "rgba(0, 0, 0, 0.2)";
-  ctx2d.fillRect(x + offset, y + offset, tooltipWidth, tooltipHeight);
+  ctx2d.fillStyle = "rgba(255, 255, 255, 0.8)";
+  ctx2d.strokeStyle = "black";
+  ctx2d.rect(x + offsetX, y + offsetY, tooltipWidth, tooltipHeight);
+  ctx2d.fill();
+  ctx2d.stroke();
   ctx2d.fillStyle = "black";
-  ctx2d.fillText(text, x + padding + offset, y + padding + offset);
+  ctx2d.fillText(text, x + padding + offsetX, y + padding + offsetY);
 }

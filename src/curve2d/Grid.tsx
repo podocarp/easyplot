@@ -78,12 +78,12 @@ export function Curve2DGrid() {
     gl.useProgram(program);
     _setUniforms(program, state);
 
-    const visibleTicks = 1 / scale;
+    const visibleTicks = 2 / scale;
     let majorDivisions = 1;
     let minorDivisions = 1 / 5;
     if (visibleTicks > 1) {
       majorDivisions = Math.trunc(visibleTicks / 5) * 5;
-      minorDivisions = majorDivisions / 10;
+      minorDivisions = majorDivisions / 5;
     }
     const majDivLocation = gl.getUniformLocation(program, "u_major_divisions");
     gl.uniform1f(majDivLocation, majorDivisions);
