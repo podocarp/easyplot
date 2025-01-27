@@ -16,6 +16,8 @@ const gridFragmentShader = `
   uniform vec2 u_resolution;
   uniform vec2 u_translation;
   uniform float u_scale;
+  uniform float u_major_divisions;
+  uniform float u_minor_divisions;
 
   void main() {
       // actually the thickness value divided by 2
@@ -31,10 +33,16 @@ const gridFragmentShader = `
       }
 
       float pixelsPerUnit = u_resolution.y * u_scale / 2.0;
-      vec2 grid = mod(pos, pixelsPerUnit);
+      vec2 grid = mod(pos, pixelsPerUnit * u_major_divisions);
       if ((-thickness <= grid.x && grid.x <= thickness)
         || (-thickness <= grid.y && grid.y <= thickness)) {
             gl_FragColor = vec4(0.5, 0.5, 0.5, 1.0);
+            return;
+      }
+      grid = mod(pos, pixelsPerUnit * u_minor_divisions);
+      if ((-thickness <= grid.x && grid.x <= thickness)
+        || (-thickness <= grid.y && grid.y <= thickness)) {
+            gl_FragColor = vec4(0.5, 0.5, 0.5, 0.1);
             return;
       }
       discard;
@@ -66,9 +74,22 @@ export function Curve2DGrid() {
   };
 
   const render = (program: WebGLProgram, state: Curve2DState) => {
-    const { gl } = state;
+    const { gl, scale } = state;
     gl.useProgram(program);
     _setUniforms(program, state);
+
+    const visibleTicks = 1 / scale;
+    let majorDivisions = 1;
+    let minorDivisions = 1 / 5;
+    if (visibleTicks > 1) {
+      majorDivisions = Math.trunc(visibleTicks / 5) * 5;
+      minorDivisions = majorDivisions / 10;
+    }
+    const majDivLocation = gl.getUniformLocation(program, "u_major_divisions");
+    gl.uniform1f(majDivLocation, majorDivisions);
+    const minDivLocation = gl.getUniformLocation(program, "u_minor_divisions");
+    gl.uniform1f(minDivLocation, minorDivisions);
+
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
     gl.bufferData(
       gl.ARRAY_BUFFER,
