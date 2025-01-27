@@ -39,7 +39,7 @@ const defaultColors = [
 
 export function Curve2DCurve({
   fun,
-  steps = 1000,
+  steps = 100,
   color,
   hover = true,
   _id,
@@ -55,20 +55,21 @@ export function Curve2DCurve({
   const ctx = useContext(Curve2DContext);
   const key = `curve-${_id}`;
 
-  let prevXmax = 0;
-  let prevXmin = 0;
+  let prevKey = "";
   let prevPoints: number[] = [];
   const calcPoints = (state: Curve2DState) => {
     const { xmax, xmin, ymax, ymin } = state.canvasRange;
-    if (xmax === prevXmax && xmin === prevXmin) {
+    const key = `${xmax}-${xmin}-${ymax}-${ymin}`;
+    if (key === prevKey) {
       return prevPoints;
     }
 
     const points = [];
     // approximate step size
-    const stepSize = (xmax - xmin) / steps;
+    const defaultStepSize = (xmax - xmin) / steps;
+    let stepSize = defaultStepSize;
 
-    const prevy = 0;
+    let prevy = 0;
     for (let x = xmin; x <= xmax; ) {
       const y = fun(x);
       if (y > ymax || y < ymin) {
@@ -77,21 +78,20 @@ export function Curve2DCurve({
         points.push(x, y);
       }
 
-      const gradient = (prevy - y) / stepSize;
-      if (gradient < 10) {
-        x += stepSize;
-      } else {
-        let multiplier = gradient / 10;
-        if (multiplier > 10) {
-          multiplier = 10;
-        }
-        x += stepSize / multiplier;
+      let gradient = Math.abs((prevy - y) / stepSize);
+      if (gradient < 1) {
+        gradient = 1;
       }
+      if (gradient > 1000) {
+        gradient = 1000;
+      }
+      stepSize = defaultStepSize / gradient;
+      prevy = y;
+      x += stepSize;
     }
 
     prevPoints = points;
-    prevXmax = xmax;
-    prevXmin = xmin;
+    prevKey = key;
 
     return points;
   };
@@ -102,7 +102,7 @@ export function Curve2DCurve({
       scale,
     } = state;
 
-    const radius = 0.1 * scale;
+    const radius = 0.05 * scale;
     const startIndex = binSearchPointX(points, gridX - radius);
     let mindist = Infinity;
     let nearestX = 0;
@@ -119,7 +119,7 @@ export function Curve2DCurve({
     if (mindist != Infinity) {
       const precision = Math.abs(toExponential(scale, 10).exponent) + 2;
       const [tx, ty] = gridUnitsToScreenSpace(state, nearestX, nearestY);
-      drawCircle(state, tx, ty);
+      drawCircle(state, tx, ty, 4);
       drawTooltip(
         state,
         `(${nearestX !== undefined ? nearestX.toFixed(precision) : "-"}, ${nearestY !== undefined ? nearestY.toFixed(precision) : "-"})`,

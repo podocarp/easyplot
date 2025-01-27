@@ -17,13 +17,14 @@ export function drawTooltip(
   ctx2d.font = "14px sans-serif";
   ctx2d.textBaseline = "top";
   const tooltipWidth = ctx2d.measureText(text).width + 2 * padding;
-  const tooltipHeight = 14 * 1.25 + 2 * padding; // this seems to work fine
+  const tooltipHeight = 14 * 1.3 + 2 * padding; // this seems to work fine
 
   const x = canvasX;
   const y = canvasY;
 
   ctx2d.fillStyle = "rgba(255, 255, 255, 0.8)";
-  ctx2d.strokeStyle = "black";
+  ctx2d.strokeStyle = "gray";
+  state.ctx2d.beginPath();
   ctx2d.rect(x + offsetX, y + offsetY, tooltipWidth, tooltipHeight);
   ctx2d.fill();
   ctx2d.stroke();
@@ -44,10 +45,9 @@ export function drawMarker(
   ctx2d.textBaseline = "middle";
 
   const tooltipWidth = ctx2d.measureText(text).width + 2 * padding;
-  const tooltipHeight = 12 * 1.25 + 2 * padding;
+  const tooltipHeight = 12 * 1.3 + 2 * padding;
 
   ctx2d.fillStyle = "rgba(255, 255, 255, 0.8)";
-  ctx2d.strokeStyle = "black";
   ctx2d.fillRect(
     canvasX - tooltipWidth / 2,
     canvasY - tooltipHeight / 2,

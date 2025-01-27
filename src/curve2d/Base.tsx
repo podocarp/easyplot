@@ -227,7 +227,7 @@ export function Curve2D({
     if (!gl) {
       throw Error("WebGL not supported");
     }
-    const ctx2d = canvas2d.getContext("2d");
+    const ctx2d = canvas2d.getContext("2d", { premultipliedAlpha: false });
     if (!ctx2d) {
       throw Error("Canvas not supported!");
     }

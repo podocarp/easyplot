@@ -30,7 +30,7 @@ const gridFragmentShader = `
 
       if ((-thickness <= pos.x && pos.x <= thickness)
         || (-thickness <= pos.y && pos.y <= thickness)) {
-            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+            gl_FragColor = vec4(0.0, 0.0, 0.0, 0.8);
             return;
       }
 
@@ -38,7 +38,7 @@ const gridFragmentShader = `
       vec2 grid = mod(pos, pixelsPerUnit * u_major_divisions);
       if ((-thickness <= grid.x && grid.x <= thickness)
         || (-thickness <= grid.y && grid.y <= thickness)) {
-            gl_FragColor = vec4(0.5, 0.5, 0.5, 1.0);
+            gl_FragColor = vec4(0.5, 0.5, 0.5, 0.8);
             return;
       }
       grid = mod(pos, pixelsPerUnit * u_minor_divisions);
