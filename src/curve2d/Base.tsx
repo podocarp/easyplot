@@ -167,8 +167,8 @@ function handleZoom(state: Curve2DState, delta: number) {
     scale *= zoomFactor;
   }
 
-  if (scale < 0.1) {
-    scale = 0.1;
+  if (scale < 0.01) {
+    scale = 0.01;
   }
   if (scale > 100) {
     scale = 100;
@@ -296,13 +296,18 @@ export function Curve2D({
           updateCanvasRange(curveState.current);
           render();
         }}
-        onWheel={(event) => {
-          if (!curveState.current) {
-            return;
-          }
-          handleZoom(curveState.current, event.deltaY);
-          updateCanvasRange(curveState.current);
-          render();
+        ref={(r) => {
+          // have to do this roundabout way because standard react event
+          // handlers are passive and don't allow preventDefault.
+          r?.addEventListener("wheel", (event) => {
+            event.preventDefault();
+            if (!curveState.current) {
+              return;
+            }
+            handleZoom(curveState.current, event.deltaY);
+            updateCanvasRange(curveState.current);
+            render();
+          });
         }}
       >
         {Children.map(

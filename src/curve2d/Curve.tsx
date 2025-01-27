@@ -5,6 +5,7 @@ import { binSearchPointX } from "@/lib/curve2d/points";
 import { distSq, gridUnitsToScreenSpace } from "@/lib/curve2d/coords";
 import { drawTooltip } from "@/lib/curve2d/tooltip";
 import { drawCircle } from "@/lib/curve2d/circle";
+import { toExponential } from "@/lib/math/general";
 
 const curveVertexShader = `
     attribute vec2 a_position;
@@ -116,11 +117,12 @@ export function Curve2DCurve({
     }
 
     if (mindist != Infinity) {
+      const precision = Math.abs(toExponential(scale, 10).exponent) + 2;
       const [tx, ty] = gridUnitsToScreenSpace(state, nearestX, nearestY);
       drawCircle(state, tx, ty);
       drawTooltip(
         state,
-        `(${nearestX !== undefined ? nearestX.toFixed(2) : "-"}, ${nearestY !== undefined ? nearestY.toFixed(2) : "-"})`,
+        `(${nearestX !== undefined ? nearestX.toFixed(precision) : "-"}, ${nearestY !== undefined ? nearestY.toFixed(precision) : "-"})`,
         tx,
         ty,
         4,

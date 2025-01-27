@@ -3,6 +3,7 @@ import { createProgram } from "../lib/gl";
 import { _setUniforms, Curve2DContext, Curve2DState } from "./Base";
 import { gridUnitsToScreenSpace } from "@/lib/curve2d/coords";
 import { drawMarker } from "@/lib/curve2d/tooltip";
+import { toExponential } from "@/lib/math/general";
 
 const gridVertexShader = `
   attribute vec2 a_position;
@@ -50,27 +51,49 @@ const gridFragmentShader = `
   }
 `;
 
+// configuration in the format of
+// number of ticks, major division width, minor division width
+const divisions = [
+  [1, 0.2, 0.05],
+  [2, 0.5, 0.1],
+  [5, 1, 0.2],
+  [10, 2, 0.5],
+];
+
+function calcDivisions(visibleTicks: number) {
+  const { mantissa, exponent } = toExponential(visibleTicks, 10);
+  const mul = 10 ** exponent;
+
+  const i = divisions.findIndex((elem) => elem[0] > mantissa);
+  const elem = divisions[i - 1];
+  return [elem[1] * mul, elem[2] * mul, exponent];
+}
+
+function closest(n: number, d: number) {
+  return Math.trunc(n / d) * d;
+}
+
+function trunc(n: number, digits: number) {
+  const base = 10 ** digits;
+  return Math.round(n * base) / base;
+}
+
 export function Curve2DGrid() {
   const ctx = useContext(Curve2DContext);
 
-  const drawTicks = (state: Curve2DState) => {
+  const drawTicks = (state: Curve2DState, division: number, prec: number) => {
     const { xmin, xmax, ymin, ymax } = state.canvasRange;
-    const { ctx2d } = state;
-    ctx2d.font = "12px sans-serif";
-    ctx2d.textAlign = "center";
-    ctx2d.shadowColor = "white";
-    ctx2d.shadowBlur = 7;
-    for (let i = Math.floor(xmin); i <= Math.ceil(xmax); i++) {
+    for (let i = closest(xmin, division); i <= Math.ceil(xmax); i += division) {
       const [x, y] = gridUnitsToScreenSpace(state, i, 0);
-      drawMarker(state, "" + i, x, y + 12);
+      drawMarker(state, trunc(i, prec).toString(10), x, y + 12);
     }
-    for (let i = Math.floor(ymin); i <= Math.ceil(ymax); i++) {
+    for (let i = closest(ymin, division); i <= Math.ceil(ymax); i += division) {
       const [x, y] = gridUnitsToScreenSpace(state, 0, i);
-      if (i === 0) {
+      if (-10e-6 <= i && i <= 10e-6) {
         // only need one mark on the origin
         continue;
       }
-      drawMarker(state, "" + i, x - 10, y);
+      drawMarker(state, trunc(i, prec).toString(10), x - 10, y);
     }
   };
 
@@ -79,17 +102,11 @@ export function Curve2DGrid() {
     gl.useProgram(program);
     _setUniforms(program, state);
 
-    const visibleTicks = 2 / scale;
-    let majorDivisions = 1;
-    let minorDivisions = 1 / 5;
-    if (visibleTicks > 1) {
-      majorDivisions = Math.trunc(visibleTicks / 5) * 5;
-      minorDivisions = majorDivisions / 5;
-    }
+    const [maj, min, base] = calcDivisions(2 / scale);
     const majDivLocation = gl.getUniformLocation(program, "u_major_divisions");
-    gl.uniform1f(majDivLocation, majorDivisions);
+    gl.uniform1f(majDivLocation, maj);
     const minDivLocation = gl.getUniformLocation(program, "u_minor_divisions");
-    gl.uniform1f(minDivLocation, minorDivisions);
+    gl.uniform1f(minDivLocation, min);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
     gl.bufferData(
@@ -111,7 +128,7 @@ export function Curve2DGrid() {
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-    drawTicks(state);
+    drawTicks(state, maj, Math.abs(base) + 1);
   };
 
   const factory = (state: Curve2DState) => {
