@@ -30,3 +30,30 @@ export function drawTooltip(
   ctx2d.fillStyle = "black";
   ctx2d.fillText(text, x + padding + offsetX, y + padding + offsetY);
 }
+
+export function drawMarker(
+  state: Curve2DState,
+  text: string,
+  canvasX: number,
+  canvasY: number
+) {
+  const { ctx2d } = state;
+  const padding = 2;
+  ctx2d.font = "12px sans-serif";
+  ctx2d.textAlign = "center";
+  ctx2d.textBaseline = "middle";
+
+  const tooltipWidth = ctx2d.measureText(text).width + 2 * padding;
+  const tooltipHeight = 12 * 1.25 + 2 * padding;
+
+  ctx2d.fillStyle = "rgba(255, 255, 255, 0.8)";
+  ctx2d.strokeStyle = "black";
+  ctx2d.fillRect(
+    canvasX - tooltipWidth / 2,
+    canvasY - tooltipHeight / 2,
+    tooltipWidth,
+    tooltipHeight
+  );
+  ctx2d.fillStyle = "black";
+  ctx2d.fillText(text, canvasX, canvasY);
+}

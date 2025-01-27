@@ -2,6 +2,7 @@ import { useContext, useEffect } from "react";
 import { createProgram } from "../lib/gl";
 import { _setUniforms, Curve2DContext, Curve2DState } from "./Base";
 import { gridUnitsToScreenSpace } from "@/lib/curve2d/coords";
+import { drawMarker } from "@/lib/curve2d/tooltip";
 
 const gridVertexShader = `
   attribute vec2 a_position;
@@ -56,20 +57,20 @@ export function Curve2DGrid() {
     const { xmin, xmax, ymin, ymax } = state.canvasRange;
     const { ctx2d } = state;
     ctx2d.font = "12px sans-serif";
-    ctx2d.textAlign = "left";
+    ctx2d.textAlign = "center";
+    ctx2d.shadowColor = "white";
+    ctx2d.shadowBlur = 7;
     for (let i = Math.floor(xmin); i <= Math.ceil(xmax); i++) {
       const [x, y] = gridUnitsToScreenSpace(state, i, 0);
-      // magic numbers are some padding that seems to work fine
-      ctx2d.fillText("" + i, x + 5, y + 15);
+      drawMarker(state, "" + i, x, y + 12);
     }
-    ctx2d.textAlign = "right";
     for (let i = Math.floor(ymin); i <= Math.ceil(ymax); i++) {
       const [x, y] = gridUnitsToScreenSpace(state, 0, i);
       if (i === 0) {
         // only need one mark on the origin
         continue;
       }
-      ctx2d.fillText("" + i, x - 5, y);
+      drawMarker(state, "" + i, x - 10, y);
     }
   };
 
