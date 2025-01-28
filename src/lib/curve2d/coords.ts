@@ -53,7 +53,7 @@ export function screenSpaceToClipSpace(
   x: number,
   y: number
 ) {
-  const { width, height } = state.canvasRange;
+  const { width, height } = state.canvas;
   return [x / (width / 2) - 1, 1 - y / (height / 2)];
 }
 

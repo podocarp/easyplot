@@ -28,6 +28,8 @@ export type Curve2DState = {
    * everything is centered. The number of pixels each grid unit takes up is
    * thus `canvas.height / 2 * scale`. */
   scale: number;
+  /** The up/downscaling of the canvas, mainly for hi-dpi displays. */
+  dpiratio: number;
 
   mouse: {
     /** Mouse position on the canvas in clip space, from (-1, -1) on the bottom
@@ -57,10 +59,6 @@ export type Curve2DState = {
     ymax: number;
     /** Range of the current canvas view in terms of grid units. */
     ymin: number;
-    /** Width of canvas. */
-    width: number;
-    /** Height of canvas. */
-    height: number;
   };
 
   _isDragging: boolean;
@@ -107,12 +105,12 @@ export const Curve2DContext = createContext<Curve2DElements>({
  * units. */
 function updateCanvasRange(state: Curve2DState) {
   const {
-    gl,
+    canvas,
     translation: [transx, transy],
     scale,
   } = state;
-  const canvasWidthHalf = gl.canvas.width / 2;
-  const canvasHeightHalf = gl.canvas.height / 2;
+  const canvasWidthHalf = canvas.width / 2;
+  const canvasHeightHalf = canvas.height / 2;
   const pixelsPerUnit = canvasHeightHalf * scale;
   const transxInUnits = transx / canvasHeightHalf;
   const transyInUnits = transy / canvasHeightHalf;
@@ -128,8 +126,9 @@ function updateMousePos(state: Curve2DState) {
   // clientXY is reported in screen space coordinates, not canvas space,
   // so we need to offset it by the canvas rect
   const { x: canvasX, y: canvasY } = state.canvas.getClientRects()[0];
-  state.mouse.canvasX = state._lastMousePos[0] - canvasX;
-  state.mouse.canvasY = state._lastMousePos[1] - canvasY;
+  const { dpiratio: ratio } = state;
+  state.mouse.canvasX = (state._lastMousePos[0] - canvasX) * ratio;
+  state.mouse.canvasY = (state._lastMousePos[1] - canvasY) * ratio;
 
   const [clipX, clipY] = screenSpaceToClipSpace(
     state,
@@ -152,8 +151,8 @@ function handleDrag(state: Curve2DState, mouseX: number, mouseY: number) {
   const [lastX, lastY] = state._lastMousePos;
   const deltaX = mouseX - lastX;
   const deltaY = mouseY - lastY;
-  state.translation[0] += deltaX / state.scale;
-  state.translation[1] -= deltaY / state.scale;
+  state.translation[0] += (deltaX / state.scale) * state.dpiratio;
+  state.translation[1] -= (deltaY / state.scale) * state.dpiratio;
 }
 
 function handleZoom(state: Curve2DState, delta: number) {
@@ -189,10 +188,10 @@ export function Curve2D({
   bgColor?: [number, number, number, number];
   children: React.ReactNode;
 }) {
+  const ratio = window.devicePixelRatio;
   const curveState = useRef<Curve2DState>(undefined);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvas2DRef = useRef<HTMLCanvasElement>(null);
-
   const painter = new ZPainter<Curve2DState>();
   const registerRender = (
     key: string,
@@ -211,7 +210,8 @@ export function Curve2D({
     gl.clearColor(...bgColor);
     gl.clear(gl.COLOR_BUFFER_BIT);
     ctx2d.clearRect(0, 0, ctx2d.canvas.width, ctx2d.canvas.height);
-    ctx2d.font = "12px sans-serif";
+    ctx2d.fillStyle = "black";
+    ctx2d.fillRect(0, 0, 1, 1);
 
     painter.render(curveState.current);
   };
@@ -232,6 +232,7 @@ export function Curve2D({
       throw Error("Canvas not supported!");
     }
 
+    ctx2d.setTransform(ratio, 0, 0, ratio, 0, 0);
     painter.clear();
 
     curveState.current = {
@@ -243,6 +244,7 @@ export function Curve2D({
       _lastMousePos: [0, 0],
       _points: new Map(),
       translation: [0, 0],
+      dpiratio: ratio,
       mouse: {
         clipX: 0,
         clipY: 0,
@@ -257,8 +259,6 @@ export function Curve2D({
         xmin: 1.2,
         ymax: -1.2,
         ymin: 1.2,
-        width,
-        height,
       },
     };
 
@@ -321,18 +321,20 @@ export function Curve2D({
             canvasRef.current = r;
             init();
           }}
-          width={width}
-          height={height}
-          className="absolute top-0 left-0 z-0"
+          width={width * ratio}
+          height={height * ratio}
+          style={{ width: `${width}px`, height: `${height}px` }}
+          className="absolute top-0 left-0"
         ></canvas>
         <canvas
           ref={(r) => {
             canvas2DRef.current = r;
             init();
           }}
-          width={width}
-          height={height}
-          className="absolute top-0 left-0 z-10"
+          width={width * ratio}
+          height={height * ratio}
+          style={{ width: `${width}px`, height: `${height}px` }}
+          className="absolute top-0 left-0"
         />
       </div>
     </Curve2DContext.Provider>

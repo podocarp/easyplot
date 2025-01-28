@@ -12,15 +12,15 @@ export function drawTooltip(
   offsetX: number = 0,
   offsetY: number = 0
 ) {
-  const { ctx2d } = state;
+  const { ctx2d, dpiratio: ratio } = state;
   ctx2d.textAlign = "left";
   ctx2d.font = "14px sans-serif";
   ctx2d.textBaseline = "top";
   const tooltipWidth = ctx2d.measureText(text).width + 2 * padding;
   const tooltipHeight = 14 * 1.3 + 2 * padding; // this seems to work fine
 
-  const x = canvasX;
-  const y = canvasY;
+  const x = canvasX / ratio;
+  const y = canvasY / ratio;
 
   ctx2d.fillStyle = "rgba(255, 255, 255, 0.8)";
   ctx2d.strokeStyle = "gray";
@@ -38,22 +38,24 @@ export function drawMarker(
   canvasX: number,
   canvasY: number
 ) {
-  const { ctx2d } = state;
-  const padding = 2;
+  const { ctx2d, dpiratio: ratio } = state;
+  const padding = 1;
   ctx2d.font = "12px sans-serif";
   ctx2d.textAlign = "center";
   ctx2d.textBaseline = "middle";
 
   const tooltipWidth = ctx2d.measureText(text).width + 2 * padding;
   const tooltipHeight = 12 * 1.3 + 2 * padding;
+  const x = canvasX / ratio;
+  const y = canvasY / ratio;
 
   ctx2d.fillStyle = "rgba(255, 255, 255, 0.8)";
   ctx2d.fillRect(
-    canvasX - tooltipWidth / 2,
-    canvasY - tooltipHeight / 2,
+    x - tooltipWidth / 2,
+    y - tooltipHeight / 2,
     tooltipWidth,
     tooltipHeight
   );
   ctx2d.fillStyle = "black";
-  ctx2d.fillText(text, canvasX, canvasY);
+  ctx2d.fillText(text, x, y);
 }

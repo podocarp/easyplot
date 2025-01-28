@@ -6,10 +6,11 @@ export function drawCircle(
   canvasY: number,
   radius: number = 5
 ) {
-  state.ctx2d.fillStyle = "white";
-  state.ctx2d.strokeStyle = "black";
-  state.ctx2d.beginPath();
-  state.ctx2d.arc(canvasX, canvasY, radius, 0, 2 * Math.PI);
-  state.ctx2d.fill();
-  state.ctx2d.stroke();
+  const { ctx2d, dpiratio: ratio } = state;
+  ctx2d.fillStyle = "white";
+  ctx2d.strokeStyle = "black";
+  ctx2d.beginPath();
+  ctx2d.arc(canvasX / ratio, canvasY / ratio, radius, 0, 2 * Math.PI);
+  ctx2d.fill();
+  ctx2d.stroke();
 }
