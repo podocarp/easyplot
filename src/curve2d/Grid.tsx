@@ -1,6 +1,6 @@
 import { useContext, useEffect } from "react";
 import { createProgram } from "../lib/gl";
-import { _setUniforms, Curve2DContext, Curve2DState } from "./Base";
+import { setUniforms, Curve2DContext, Curve2DState } from "./Base";
 import { gridUnitsToScreenSpace } from "@/lib/curve2d/coords";
 import { drawMarker } from "@/lib/curve2d/tooltip";
 import { toExponential } from "@/lib/math/general";
@@ -100,7 +100,7 @@ export function Curve2DGrid() {
   const render = (program: WebGLProgram, state: Curve2DState) => {
     const { gl, scale } = state;
     gl.useProgram(program);
-    _setUniforms(program, state);
+    setUniforms(program, state);
 
     const [maj, min, base] = calcDivisions(2 / scale);
     const majDivLocation = gl.getUniformLocation(program, "u_major_divisions");

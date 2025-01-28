@@ -71,7 +71,7 @@ export type Curve2DState = {
   _points: Map<string, number[]>;
 };
 
-export function _setUniforms(program: WebGLProgram, state: Curve2DState) {
+export function setUniforms(program: WebGLProgram, state: Curve2DState) {
   const { gl, canvas, translation, scale, mouse } = state;
   const resolutionUniform = gl.getUniformLocation(program, "u_resolution");
   const translationUniform = gl.getUniformLocation(program, "u_translation");
@@ -227,7 +227,7 @@ export function Curve2D({
     if (!gl) {
       throw Error("WebGL not supported");
     }
-    const ctx2d = canvas2d.getContext("2d", { premultipliedAlpha: false });
+    const ctx2d = canvas2d.getContext("2d");
     if (!ctx2d) {
       throw Error("Canvas not supported!");
     }

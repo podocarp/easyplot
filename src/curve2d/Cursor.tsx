@@ -1,5 +1,5 @@
 import { useContext, useEffect } from "react";
-import { _setUniforms, Curve2DContext, Curve2DState } from "./Base";
+import { Curve2DContext, Curve2DState } from "./Base";
 import { createProgram } from "../lib/gl";
 import { binSearchPointX } from "@/lib/curve2d/points";
 import { gridUnitsToScreenSpace } from "@/lib/curve2d/coords";

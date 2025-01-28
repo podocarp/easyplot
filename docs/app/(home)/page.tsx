@@ -1,6 +1,11 @@
 "use client";
 
-import { Curve2D, Curve2DCurve, Curve2DGrid } from "easyplot";
+import {
+  Curve2D,
+  Curve2DCurve,
+  Curve2DGrid,
+  Curve2DLineSegment,
+} from "easyplot";
 import { DynamicCodeBlock } from "fumadocs-ui/components/dynamic-codeblock";
 import Link from "next/link";
 
@@ -19,9 +24,9 @@ function Header() {
             <DynamicCodeBlock
               lang="ts"
               code={`// it's as simple as
-<Curve2D width={500} height={500}>
+<Curve2D width={500} height={500} bgColor={[0.94, 0.98, 1.0, 1]}>
+  <Curve2DCurve fun={(x) => 1 / x} />
   <Curve2DGrid />
-  <Curve2DCurve fun={(x) => Math.atan(x)} showCrosshair />
 </Curve2D>`}
             />
           </div>
@@ -34,6 +39,12 @@ function Header() {
         <div style={{ width: 500, height: 500 }}>
           <Curve2D width={500} height={500} bgColor={[0.94, 0.98, 1.0, 1]}>
             <Curve2DCurve fun={(x) => 1 / x} />
+            <Curve2DLineSegment
+              from={[-1, -1]}
+              to={[1, 1]}
+              fromLabel="P"
+              toLabel="Q"
+            />
             <Curve2DGrid />
           </Curve2D>
         </div>

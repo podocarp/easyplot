@@ -1,41 +1,6 @@
-import { useContext, useEffect } from "react";
-import { _setUniforms, Curve2DContext, Curve2DState } from "./Base";
-import { createProgram } from "../lib/gl";
-import { binSearchPointX } from "@/lib/curve2d/points";
-import { distSq, gridUnitsToScreenSpace } from "@/lib/curve2d/coords";
-import { drawTooltip } from "@/lib/curve2d/tooltip";
-import { drawCircle } from "@/lib/curve2d/circle";
-import { toExponential } from "@/lib/math/general";
-
-const curveVertexShader = `
-    attribute vec2 a_position;
-    uniform vec2 u_translation;
-    uniform vec2 u_resolution;
-    uniform float u_scale;
-
-    void main() {
-      float pixelsPerUnit = u_resolution.y / 2.0 * u_scale;
-      vec2 pixelCoords = a_position * pixelsPerUnit;
-      vec2 actualCoords = pixelCoords + u_translation * u_scale;
-      vec2 pos = actualCoords / u_resolution * 2.0;
-
-      gl_Position = vec4(pos, 1, 1);
-    }
-`;
-
-const curveFragmentShader = `
-    precision mediump float;
-    uniform vec4 u_color;
-    void main() {
-      gl_FragColor = u_color;
-    }
-`;
-
-const defaultColors = [
-  [1, 0, 0, 1],
-  [0, 1, 0, 1],
-  [0, 0, 1, 1],
-];
+import { useContext, useEffect, useRef } from "react";
+import { Curve2DContext, Curve2DState } from "./Base";
+import { Curve2DCurveGeneric } from "./CurveGeneric";
 
 export function Curve2DCurve({
   fun,
@@ -53,7 +18,8 @@ export function Curve2DCurve({
   _id?: number;
 }) {
   const ctx = useContext(Curve2DContext);
-  const key = `curve-${_id}`;
+  const points = useRef<number[]>([]);
+  const id = `curve-${_id}`;
 
   let prevKey = "";
   let prevPoints: number[] = [];
@@ -96,87 +62,22 @@ export function Curve2DCurve({
     return points;
   };
 
-  const drawHover = (points: number[], state: Curve2DState) => {
-    const {
-      mouse: { gridX, gridY },
-      scale,
-    } = state;
+  const render = (state: Curve2DState) => {
+    const { _points } = state;
 
-    const radius = 0.05 * scale;
-    const startIndex = binSearchPointX(points, gridX - radius);
-    let mindist = Infinity;
-    let nearestX = 0;
-    let nearestY = 0;
-    for (let i = startIndex; points[i] < gridX + radius; i += 2) {
-      const dist = distSq(points[i], points[i + 1], gridX, gridY);
-      if (dist < radius && dist < mindist) {
-        mindist = dist;
-        nearestX = points[i];
-        nearestY = points[i + 1];
-      }
-    }
-
-    if (mindist != Infinity) {
-      const precision = Math.abs(toExponential(scale, 10).exponent) + 2;
-      const [tx, ty] = gridUnitsToScreenSpace(state, nearestX, nearestY);
-      drawCircle(state, tx, ty, 4);
-      drawTooltip(
-        state,
-        `(${nearestX !== undefined ? nearestX.toFixed(precision) : "-"}, ${nearestY !== undefined ? nearestY.toFixed(precision) : "-"})`,
-        tx,
-        ty,
-        4,
-        8,
-        -12
-      );
-    }
-  };
-
-  const render = (program: WebGLProgram, state: Curve2DState) => {
-    if (!program) {
-      return;
-    }
-    const { gl, _points } = state;
-
-    gl.useProgram(program);
-    _setUniforms(program, state);
-
-    const points = calcPoints(state);
-    _points.set(key, points);
-
-    const buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
-
-    const positionLocation = gl.getAttribLocation(program, "a_position");
-    gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-
-    gl.drawArrays(gl.LINE_STRIP, 0, points.length / 2);
-
-    if (hover) {
-      drawHover(points, state);
-    }
+    points.current = calcPoints(state);
+    _points.set(id, points.current);
   };
 
   const factory = (state: Curve2DState) => {
-    const { gl } = state;
-    const program = createProgram(gl, curveVertexShader, curveFragmentShader);
-    gl.useProgram(program);
-    const colorLocation = gl.getUniformLocation(program, "u_color");
-    if (color) {
-      gl.uniform4fv(colorLocation, color);
-    } else {
-      const color = defaultColors[_id || 0 % defaultColors.length];
-      gl.uniform4fv(colorLocation, color);
-    }
-
-    return () => render(program, state);
+    return () => render(state);
   };
 
   useEffect(() => {
-    ctx.registerRender(key, 0, factory);
+    ctx.registerRender(id, 10, factory);
   });
 
-  return <></>;
+  return (
+    <Curve2DCurveGeneric points={points} color={color} hover={hover} id={id} />
+  );
 }
