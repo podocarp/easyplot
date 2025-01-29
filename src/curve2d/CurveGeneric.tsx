@@ -6,6 +6,7 @@ import { distSq, gridUnitsToScreenSpace } from "@/lib/curve2d/coords";
 import { drawTooltip } from "@/lib/curve2d/tooltip";
 import { drawCircle } from "@/lib/curve2d/circle";
 import { toExponential } from "@/lib/math/general";
+import { EventHandlerOptions } from "@/lib/events";
 
 const curveVertexShader = `
     uniform vec2 u_translation;
@@ -65,7 +66,9 @@ function getNextCurveColor() {
   return color;
 }
 
-function drawHover(state: Curve2DState, points: number[]) {
+/** Tests if the mouse is close to any point, and draws a tooltip if so.
+ * Otherwise returns false and does nothing. */
+function tryHover(state: Curve2DState, points: number[]) {
   const {
     mouse: { gridX, gridY },
     scale,
@@ -98,7 +101,9 @@ function drawHover(state: Curve2DState, points: number[]) {
       8,
       -12
     );
+    return true;
   }
+  return false;
 }
 
 /** A generic plotter; just draws the lines its given and nothing else. */
@@ -175,7 +180,7 @@ export function Curve2DCurveGeneric({
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, points.current.length / 2 - 1);
 
     if (hover) {
-      drawHover(state, points.current);
+      tryHover(state, points.current);
     }
   };
 
@@ -196,8 +201,17 @@ export function Curve2DCurveGeneric({
     return () => render(program, state);
   };
 
+  const key = `curve-generic-${id}`;
   useEffect(() => {
-    ctx.registerRender(`curve-generic-${id}`, 1000, factory);
+    ctx.registerRender(key, 1000, factory);
+    ctx.registerEventHandler("onMouseMove", `${key}-hover`, () => {
+      if (!hover || ctx.state.current === undefined) {
+        return EventHandlerOptions.nothingDone;
+      }
+      if (!tryHover(ctx.state.current, points.current)) {
+        return EventHandlerOptions.nothingDone;
+      }
+    });
   });
 
   return <></>;

@@ -10,6 +10,7 @@ import {
   clipSpaceToGridUnits,
   screenSpaceToClipSpace,
 } from "@/lib/curve2d/coords";
+import { type Event, type EventHandler, EventsManager } from "@/lib/events";
 
 export type Curve2DState = {
   gl: WebGL2RenderingContext;
@@ -82,13 +83,20 @@ export function setUniforms(program: WebGLProgram, state: Curve2DState) {
   gl.uniform2f(mouseUniform, mouse.clipX, mouse.clipY);
 }
 
-export type Curve2DElements = {
-  state?: Curve2DState;
+type Curve2DContext = {
+  state: React.RefObject<Curve2DState | undefined>;
   /** used to register your render function with the curve */
   registerRender: (
     key: string,
     zindex: number,
     factory: Curve2DRenderFuncFactory
+  ) => void;
+  registerEventHandler: (
+    event: Event,
+    key: string,
+    /** Handler returns true if it wants to override the default behavior. For
+     * example, prevent the canvas from being dragged.*/
+    handler: EventHandler<Curve2DEventHandlerArg>
   ) => void;
 };
 
@@ -97,9 +105,22 @@ export type Curve2DRenderFuncFactory = (
 ) => Curve2DRenderFunc;
 export type Curve2DRenderFunc = () => void;
 
-export const Curve2DContext = createContext<Curve2DElements>({
-  registerRender: () => {},
-});
+export type Curve2DEventHandlerArg = Partial<{
+  /** Pixels mouse moved along x axis in this event. */
+  deltaX: number;
+  /** Pixels mouse moved along y axis in this event. */
+  deltaY: number;
+  /** Mouse x coordinates in grid units. */
+  mouseX: number;
+  /** Mouse y coordinates in grid units. */
+  mouseY: number;
+  /** Some arbitrary browser units scrolled in this event. */
+  deltaScroll: number;
+}>;
+
+export const Curve2DContext = createContext<Curve2DContext>(
+  {} as Curve2DContext
+);
 
 /** Returns the displayable range of the current canvas view in terms of grid
  * units. */
@@ -147,18 +168,10 @@ function updateMousePos(state: Curve2DState) {
   state.mouse.gridY = gridY;
 }
 
-function handleDrag(state: Curve2DState, mouseX: number, mouseY: number) {
-  const [lastX, lastY] = state._lastMousePos;
-  const deltaX = mouseX - lastX;
-  const deltaY = mouseY - lastY;
-  state.translation[0] += (deltaX / state.scale) * state.dpiratio;
-  state.translation[1] -= (deltaY / state.scale) * state.dpiratio;
-}
-
 function handleZoom(state: Curve2DState, delta: number) {
   let scale = state.scale;
   const zoomFactor = 1.03;
-  if (delta < 0) {
+  if (delta > 0) {
     // Zoom in
     scale /= zoomFactor;
   } else {
@@ -201,6 +214,27 @@ export function Curve2D({
     painter.register(key, zindex, factory);
     render();
   };
+  const eventManager = new EventsManager<Curve2DEventHandlerArg>();
+
+  eventManager.registerDefault("onDrag", ({ deltaX, deltaY }) => {
+    if (curveState.current === undefined) {
+      return;
+    }
+    const { scale, dpiratio } = curveState.current;
+    curveState.current.translation[0] +=
+      ((deltaX as number) / scale) * dpiratio;
+    curveState.current.translation[1] -=
+      ((deltaY as number) / scale) * dpiratio;
+    updateCanvasRange(curveState.current);
+  });
+
+  eventManager.registerDefault("onWheel", ({ deltaScroll }) => {
+    if (curveState.current === undefined) {
+      return;
+    }
+    handleZoom(curveState.current, deltaScroll as number);
+    updateCanvasRange(curveState.current);
+  });
 
   const render = () => {
     if (!curveState.current) {
@@ -268,7 +302,11 @@ export function Curve2D({
 
   return (
     <Curve2DContext.Provider
-      value={{ state: curveState.current, registerRender: registerRender }}
+      value={{
+        state: curveState,
+        registerRender: registerRender,
+        registerEventHandler: eventManager.register.bind(eventManager),
+      }}
     >
       <div
         className="relative"
@@ -277,6 +315,14 @@ export function Curve2D({
             return;
           }
           curveState.current._isDragging = true;
+          eventManager.trigger(
+            "onMouseDown",
+            {
+              mouseX: curveState.current.mouse.gridX,
+              mouseY: curveState.current.mouse.gridY,
+            },
+            render
+          );
         }}
         onMouseUp={() => {
           if (!curveState.current) {
@@ -288,25 +334,47 @@ export function Curve2D({
           if (!curveState.current) {
             return;
           }
-          if (curveState.current._isDragging) {
-            handleDrag(curveState.current, event.clientX, event.clientY);
-          }
+          const [lastX, lastY] = curveState.current._lastMousePos;
           curveState.current._lastMousePos = [event.clientX, event.clientY];
+          const deltaX = event.clientX - lastX;
+          const deltaY = event.clientY - lastY;
           updateMousePos(curveState.current);
-          updateCanvasRange(curveState.current);
-          render();
+
+          if (curveState.current._isDragging) {
+            eventManager.trigger(
+              "onDrag",
+              {
+                deltaX,
+                deltaY,
+              },
+              render
+            );
+          }
+
+          eventManager.trigger(
+            "onMouseMove",
+            {
+              deltaX,
+              deltaY,
+              mouseX: curveState.current.mouse.gridX,
+              mouseY: curveState.current.mouse.gridY,
+            },
+            render
+          );
         }}
         ref={(r) => {
           // have to do this roundabout way because standard react event
           // handlers are passive and don't allow preventDefault.
           r?.addEventListener("wheel", (event) => {
-            event.preventDefault();
             if (!curveState.current) {
               return;
             }
-            handleZoom(curveState.current, event.deltaY);
-            updateCanvasRange(curveState.current);
-            render();
+            event.preventDefault();
+            eventManager.trigger(
+              "onWheel",
+              { deltaScroll: event.deltaY },
+              render
+            );
           });
         }}
       >

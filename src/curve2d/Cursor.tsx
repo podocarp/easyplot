@@ -4,6 +4,7 @@ import { createProgram } from "../lib/gl";
 import { binSearchPointX } from "@/lib/curve2d/points";
 import { gridUnitsToScreenSpace } from "@/lib/curve2d/coords";
 import { drawTooltip } from "@/lib/curve2d/tooltip";
+import { EventHandlerOptions } from "@/lib/events";
 
 const crosshairVertexShader = `
 attribute vec2 a_position;
@@ -79,15 +80,7 @@ function processPoints(state: Curve2DState, points: number[]) {
 }
 
 export function Curve2DVerticalCursor() {
-  const ctx = useContext(Curve2DContext);
-
-  const render = (program: WebGLProgram, state: Curve2DState) => {
-    if (!program) {
-      return;
-    }
-    drawLine(program, state);
-    state._points.values().forEach((points) => processPoints(state, points));
-  };
+  const { registerRender, registerEventHandler } = useContext(Curve2DContext);
 
   const factory = (state: Curve2DState) => {
     const program = createProgram(
@@ -95,11 +88,31 @@ export function Curve2DVerticalCursor() {
       crosshairVertexShader,
       crosshairFragmentShader
     );
-    return () => render(program, state);
+    return () => {
+      drawLine(program, state);
+      state._points.values().forEach((points) => processPoints(state, points));
+    };
   };
 
+  let lastMouseX = 0;
   useEffect(() => {
-    ctx.registerRender("cursor-vert", 1, factory);
+    registerRender("cursor-vert", 1, factory);
+    registerEventHandler(
+      "onMouseMove",
+      "cursor-vert-mousemove",
+      ({ mouseX }) => {
+        if (mouseX === undefined) {
+          return EventHandlerOptions.nothingDone;
+        }
+        if (lastMouseX === mouseX) {
+          return EventHandlerOptions.nothingDone;
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        lastMouseX = mouseX;
+        // don't need to do anything else, the render function will be called
+        // automatically
+      }
+    );
   });
 
   return <></>;

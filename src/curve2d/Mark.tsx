@@ -17,16 +17,17 @@ export function Curve2DMark({
   _id?: number | string;
 }) {
   const ctx = useContext(Curve2DContext);
-  const render = (state: Curve2DState) => {
-    const [sx, sy] = gridUnitsToScreenSpace(state, x, y);
-    drawCircle(state, sx, sy, 4);
-    if (text) {
-      drawMarker(state, text, sx + 16, sy);
-    }
-  };
+
   const factory = (state: Curve2DState) => {
-    return () => render(state);
+    return () => {
+      const [sx, sy] = gridUnitsToScreenSpace(state, x, y);
+      drawCircle(state, sx, sy, 4);
+      if (text) {
+        drawMarker(state, text, sx + 16, sy);
+      }
+    };
   };
+
   useEffect(() => {
     ctx.registerRender(`mark-${_id}`, 10, factory);
   });
