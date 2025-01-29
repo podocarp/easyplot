@@ -12,7 +12,7 @@ import {
 } from "@/lib/curve2d/coords";
 
 export type Curve2DState = {
-  gl: WebGLRenderingContext;
+  gl: WebGL2RenderingContext;
   /** The canvas the graph is drawn on. Prefer using this over gl.canvas since
    * it is typed more strictly. */
   canvas: HTMLCanvasElement;

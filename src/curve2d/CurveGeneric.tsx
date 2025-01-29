@@ -8,24 +8,41 @@ import { drawCircle } from "@/lib/curve2d/circle";
 import { toExponential } from "@/lib/math/general";
 
 const curveVertexShader = `
-    attribute vec2 a_position;
     uniform vec2 u_translation;
     uniform vec2 u_resolution;
     uniform float u_scale;
+    uniform float width;
+
+    attribute vec2 a_position;
+    attribute vec2 pointA, pointB;
+    float pixelsPerUnit = u_resolution.y / 2.0 * u_scale;
+    vec2 reshalf = u_resolution / 2.0;
+
+    vec2 toClipspace(in vec2 point) {
+      point *= pixelsPerUnit;
+      point += u_translation * u_scale;
+      point /= reshalf;
+      return point;
+    }
 
     void main() {
-      float pixelsPerUnit = u_resolution.y / 2.0 * u_scale;
-      vec2 pixelCoords = a_position * pixelsPerUnit;
-      vec2 actualCoords = pixelCoords + u_translation * u_scale;
-      vec2 pos = actualCoords / u_resolution * 2.0;
+      vec2 A = toClipspace(pointA);
+      vec2 B = toClipspace(pointB);
+      vec2 AB = B - A;
+      vec2 normal = normalize(vec2(-AB.y, AB.x));
 
-      gl_Position = vec4(pos, 1, 1);
+      // a_position.x is either 0 or 1
+      vec2 point = A + AB * a_position.x;
+      // a_position.y is either 0.5 or -0.5
+      point += normal * width * a_position.y;
+      gl_Position = vec4(point, 1, 1);
     }
 `;
 
 const curveFragmentShader = `
     precision mediump float;
     uniform vec4 u_color;
+
     void main() {
       gl_FragColor = u_color;
     }
@@ -36,7 +53,7 @@ const curveDefaultColors = [
   [1, 0, 0, 1],
   [0, 1, 0, 1],
   [0, 0, 1, 1],
-  [1, 1, 0, 1],
+  [1, 0.8, 0, 1],
   [0, 1, 1, 1],
   [1, 0, 1, 1],
   [0, 0, 0, 1],
@@ -90,34 +107,72 @@ export function Curve2DCurveGeneric({
   points,
   id,
   hover,
+  width = 4,
 }: {
   /** Coordinates in grid space to draw, in x1 y1 x2 y2 format. */
   points: React.RefObject<number[]>;
   id: string;
   color?: [number, number, number, number];
+  /** Whether to show a tooltip when the mouse is close to a point. */
   hover?: boolean;
+  /** Width of the line in pixels*/
+  width?: number;
 }) {
   const ctx = useContext(Curve2DContext);
 
   const render = (program: WebGLProgram, state: Curve2DState) => {
+    if (points.current.length < 4) {
+      return;
+    }
     const { gl } = state;
-
     gl.useProgram(program);
+
     setUniforms(program, state);
 
-    const buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    const positionLocation = gl.getAttribLocation(program, "a_position");
+    const pointALocation = gl.getAttribLocation(program, "pointA");
+    const pointBLocation = gl.getAttribLocation(program, "pointB");
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      // prettier-ignore
+      new Float32Array([
+        0, -0.5,
+        1, -0.5,
+        1, 0.5,
+        0, -0.5,
+        1, 0.5,
+        0, 0.5,
+      ]),
+      gl.STATIC_DRAW
+    );
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribDivisor(positionLocation, 0);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
     gl.bufferData(
       gl.ARRAY_BUFFER,
       new Float32Array(points.current),
       gl.STATIC_DRAW
     );
+    gl.enableVertexAttribArray(pointALocation);
+    gl.vertexAttribDivisor(pointALocation, 1);
+    gl.vertexAttribPointer(pointALocation, 2, gl.FLOAT, false, 0, 0);
 
-    const positionLocation = gl.getAttribLocation(program, "a_position");
-    gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(pointBLocation);
+    gl.vertexAttribDivisor(pointBLocation, 1);
+    gl.vertexAttribPointer(
+      pointBLocation,
+      2,
+      gl.FLOAT,
+      false,
+      0,
+      Float32Array.BYTES_PER_ELEMENT * 2
+    );
 
-    gl.drawArrays(gl.LINE_STRIP, 0, points.current.length / 2);
+    gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, points.current.length / 2 - 1);
 
     if (hover) {
       drawHover(state, points.current);
@@ -134,6 +189,9 @@ export function Curve2DCurveGeneric({
     } else {
       gl.uniform4fv(colorLocation, getNextCurveColor());
     }
+
+    const widthLocation = gl.getUniformLocation(program, "width");
+    gl.uniform1f(widthLocation, (2 / gl.canvas.height) * width);
 
     return () => render(program, state);
   };
