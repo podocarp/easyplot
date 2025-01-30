@@ -98,6 +98,7 @@ type Curve2DContext = {
      * example, prevent the canvas from being dragged.*/
     handler: EventHandler<Curve2DEventHandlerArg>
   ) => void;
+  setCursor: (cursor: CSSStyleDeclaration["cursor"]) => void;
 };
 
 export type Curve2DRenderFuncFactory = (
@@ -236,6 +237,12 @@ export function Curve2D({
     updateCanvasRange(curveState.current);
   });
 
+  const setCursor = (cursor: string) => {
+    if (canvas2DRef.current) {
+      canvas2DRef.current.style.cursor = cursor;
+    }
+  };
+
   const render = () => {
     if (!curveState.current) {
       return;
@@ -306,6 +313,7 @@ export function Curve2D({
         state: curveState,
         registerRender: registerRender,
         registerEventHandler: eventManager.register.bind(eventManager),
+        setCursor,
       }}
     >
       <div
@@ -328,12 +336,23 @@ export function Curve2D({
           if (!curveState.current) {
             return;
           }
-          curveState.current._isDragging = false;
+          if (curveState.current._isDragging) {
+            eventManager.trigger(
+              "endDrag",
+              {
+                mouseX: curveState.current.mouse.gridX,
+                mouseY: curveState.current.mouse.gridY,
+              },
+              render
+            );
+            curveState.current._isDragging = false;
+          }
         }}
         onMouseMove={(event) => {
           if (!curveState.current) {
             return;
           }
+          setCursor("pointer");
           const [lastX, lastY] = curveState.current._lastMousePos;
           curveState.current._lastMousePos = [event.clientX, event.clientY];
           const deltaX = event.clientX - lastX;
@@ -346,21 +365,23 @@ export function Curve2D({
               {
                 deltaX,
                 deltaY,
+                mouseX: curveState.current.mouse.gridX,
+                mouseY: curveState.current.mouse.gridY,
+              },
+              render
+            );
+          } else {
+            eventManager.trigger(
+              "onMouseMove",
+              {
+                deltaX,
+                deltaY,
+                mouseX: curveState.current.mouse.gridX,
+                mouseY: curveState.current.mouse.gridY,
               },
               render
             );
           }
-
-          eventManager.trigger(
-            "onMouseMove",
-            {
-              deltaX,
-              deltaY,
-              mouseX: curveState.current.mouse.gridX,
-              mouseY: curveState.current.mouse.gridY,
-            },
-            render
-          );
         }}
         ref={(r) => {
           // have to do this roundabout way because standard react event

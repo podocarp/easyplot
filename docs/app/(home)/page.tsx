@@ -4,6 +4,7 @@ import {
   Curve2D,
   Curve2DCurve,
   Curve2DGrid,
+  Curve2DMark,
   Curve2DVerticalCursor,
 } from "easyplot";
 import { DynamicCodeBlock } from "fumadocs-ui/components/dynamic-codeblock";
@@ -39,6 +40,7 @@ function Header() {
         <div style={{ width: 500, height: 500 }}>
           <Curve2D width={500} height={500} bgColor={[0.94, 0.98, 1.0, 1]}>
             <Curve2DCurve fun={(x) => Math.sqrt(x ** 3 - x)} hover />
+            <Curve2DMark x={1} y={1} move={(x) => [x, x]} text="P" />
             <Curve2DVerticalCursor />
             <Curve2DGrid />
           </Curve2D>

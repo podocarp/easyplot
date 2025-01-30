@@ -5,7 +5,7 @@ export function gridUnitsToClipSpace(
   state: Curve2DState,
   x: number,
   y: number
-) {
+): [number, number] {
   const { xmax, xmin, ymax, ymin } = state.canvasRange;
 
   const ratioX = (x - xmin) / (xmax - xmin);
@@ -17,7 +17,7 @@ export function clipSpaceToGridUnits(
   state: Curve2DState,
   x: number,
   y: number
-) {
+): [number, number] {
   // translate from (-1, 1) to (0, 1)
   const normx = (x + 1) / 2;
   const normy = (y + 1) / 2;
@@ -29,7 +29,7 @@ export function clipSpaceToScreenSpace(
   state: Curve2DState,
   x: number,
   y: number
-) {
+): [number, number] {
   // convert from [-1, 1] to [0, 1]
   const normx = (x + 1) / 2;
   const normy = (1 - y) / 2;
@@ -43,7 +43,7 @@ export function gridUnitsToScreenSpace(
   state: Curve2DState,
   x: number,
   y: number
-) {
+): [number, number] {
   const [clipx, clipy] = gridUnitsToClipSpace(state, x, y);
   return clipSpaceToScreenSpace(state, clipx, clipy);
 }
@@ -52,9 +52,18 @@ export function screenSpaceToClipSpace(
   state: Curve2DState,
   x: number,
   y: number
-) {
+): [number, number] {
   const { width, height } = state.canvas;
   return [x / (width / 2) - 1, 1 - y / (height / 2)];
+}
+
+export function screenSpaceToGridUnits(
+  state: Curve2DState,
+  x: number,
+  y: number
+): [number, number] {
+  const [clipx, clipy] = screenSpaceToClipSpace(state, x, y);
+  return clipSpaceToGridUnits(state, clipx, clipy);
 }
 
 export function distSq(x1: number, y1: number, x2: number, y2: number) {

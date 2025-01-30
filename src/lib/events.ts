@@ -1,4 +1,9 @@
-export type Event = "onMouseDown" | "onDrag" | "onWheel" | "onMouseMove";
+export type Event =
+  | "onMouseDown"
+  | "onDrag"
+  | "endDrag"
+  | "onWheel"
+  | "onMouseMove";
 export type EventHandler<T> = (arg: T) => EventHandlerOptions | void;
 
 export enum EventHandlerOptions {
@@ -66,16 +71,16 @@ export class EventsManager<T = void> {
           called = true;
         }
         if (
-          (res | EventHandlerOptions.stopPropagation) ===
-          EventHandlerOptions.stopPropagation
-        ) {
-          break;
-        }
-        if (
-          (res | EventHandlerOptions.preventDefault) ===
+          (res & EventHandlerOptions.preventDefault) ===
           EventHandlerOptions.preventDefault
         ) {
           preventDefault = true;
+        }
+        if (
+          (res & EventHandlerOptions.stopPropagation) ===
+          EventHandlerOptions.stopPropagation
+        ) {
+          break;
         }
       }
     }
