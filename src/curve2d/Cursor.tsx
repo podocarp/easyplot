@@ -1,10 +1,11 @@
-import { useContext, useEffect } from "react";
-import { Curve2DContext, Curve2DState } from "./Base";
-import { createProgram } from "../lib/gl";
-import { binSearchPointX } from "@/lib/curve2d/points";
+import { drawCircle } from "@/lib/curve2d/circle";
 import { gridUnitsToScreenSpace } from "@/lib/curve2d/coords";
+import { binSearchPointX } from "@/lib/curve2d/points";
 import { drawTooltip } from "@/lib/curve2d/tooltip";
 import { EventHandlerOptions } from "@/lib/events";
+import { useContext, useEffect } from "react";
+import { createProgram } from "../lib/gl";
+import { Curve2DContext, Curve2DState } from "./Base";
 
 const crosshairVertexShader = `
 attribute vec2 a_position;
@@ -70,12 +71,15 @@ function processPoints(state: Curve2DState, points: number[]) {
   const nearestY = points[nearestPointIndex + 1];
 
   const [tx, ty] = gridUnitsToScreenSpace(state, nearestX, nearestY);
+  drawCircle(state, tx, ty, 4);
   drawTooltip(
     state,
     `(${nearestX !== undefined ? nearestX.toFixed(2) : "-"}, ${nearestY !== undefined ? nearestY.toFixed(2) : "-"})`,
     tx,
     ty,
-    4
+    4,
+    8,
+    -12
   );
 }
 

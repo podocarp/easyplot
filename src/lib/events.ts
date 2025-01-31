@@ -20,6 +20,7 @@ export enum EventHandlerOptions {
 export class EventsManager<T = void> {
   private eventHandlers: Map<Event, Map<string, EventHandler<T>>> = new Map();
   private defaultHandlers: Map<Event, EventHandler<T>> = new Map();
+  private callback: EventHandler<T>;
 
   /** Registers a new event listener. An event listener can return `true` to
    * preventDefault. */
@@ -34,6 +35,10 @@ export class EventsManager<T = void> {
 
   registerDefault(event: Event, defaultHandler: (arg: T) => void) {
     this.defaultHandlers.set(event, defaultHandler);
+  }
+
+  setCallback(callback: EventHandler<T>) {
+    this.callback = callback;
   }
 
   /** Clears all event handlers but not the default event handlers. If you want
@@ -53,7 +58,7 @@ export class EventsManager<T = void> {
 
   /** Triggers all appropriate handlers listening for this event. If any
    * handlers were called, will also call `callback` if provided. */
-  trigger(event: Event, arg: T, callback?: () => void) {
+  trigger(event: Event, arg: T) {
     let preventDefault = false;
     let called = false;
     const handlers = this.eventHandlers.get(event);
@@ -93,8 +98,8 @@ export class EventsManager<T = void> {
       }
     }
 
-    if (called && callback) {
-      callback();
+    if (called && this.callback) {
+      this.callback(arg);
     }
   }
 }

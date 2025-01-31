@@ -1,16 +1,16 @@
 import {
-  Children,
-  createContext,
-  useRef,
-  cloneElement,
-  isValidElement,
-} from "react";
-import { ZPainter } from "../lib/zpainter";
-import {
   clipSpaceToGridUnits,
   screenSpaceToClipSpace,
 } from "@/lib/curve2d/coords";
 import { type Event, type EventHandler, EventsManager } from "@/lib/events";
+import { ZPainter } from "@/lib/zpainter";
+import {
+  Children,
+  cloneElement,
+  createContext,
+  isValidElement,
+  useRef,
+} from "react";
 
 export type Curve2DState = {
   gl: WebGL2RenderingContext;
@@ -106,18 +106,19 @@ export type Curve2DRenderFuncFactory = (
 ) => Curve2DRenderFunc;
 export type Curve2DRenderFunc = () => void;
 
-export type Curve2DEventHandlerArg = Partial<{
+export type Curve2DEventHandlerArg = {
+  state: Curve2DState;
   /** Pixels mouse moved along x axis in this event. */
-  deltaX: number;
+  deltaX?: number;
   /** Pixels mouse moved along y axis in this event. */
-  deltaY: number;
+  deltaY?: number;
   /** Mouse x coordinates in grid units. */
-  mouseX: number;
+  mouseX?: number;
   /** Mouse y coordinates in grid units. */
-  mouseY: number;
+  mouseY?: number;
   /** Some arbitrary browser units scrolled in this event. */
-  deltaScroll: number;
-}>;
+  deltaScroll?: number;
+};
 
 export const Curve2DContext = createContext<Curve2DContext>(
   {} as Curve2DContext
@@ -302,8 +303,76 @@ export function Curve2D({
         ymin: 1.2,
       },
     };
-
     updateCanvasRange(curveState.current);
+
+    eventManager.setCallback(render);
+    canvas2d.addEventListener("mouseup", () => {
+      if (!curveState.current) {
+        return;
+      }
+      if (curveState.current._isDragging) {
+        eventManager.trigger("endDrag", {
+          state: curveState.current,
+          mouseX: curveState.current.mouse.gridX,
+          mouseY: curveState.current.mouse.gridY,
+        });
+        curveState.current._isDragging = false;
+      }
+    });
+
+    canvas2d.addEventListener("mousedown", () => {
+      if (!curveState.current) {
+        return;
+      }
+      curveState.current._isDragging = true;
+      eventManager.trigger("onMouseDown", {
+        state: curveState.current,
+        mouseX: curveState.current.mouse.gridX,
+        mouseY: curveState.current.mouse.gridY,
+      });
+    });
+
+    canvas2d.addEventListener("mousemove", (event) => {
+      if (!curveState.current) {
+        return;
+      }
+      setCursor("");
+      const [lastX, lastY] = curveState.current._lastMousePos;
+      curveState.current._lastMousePos = [event.clientX, event.clientY];
+      const deltaX = event.clientX - lastX;
+      const deltaY = event.clientY - lastY;
+      updateMousePos(curveState.current);
+
+      if (curveState.current._isDragging) {
+        eventManager.trigger("onDrag", {
+          state: curveState.current,
+          deltaX,
+          deltaY,
+          mouseX: curveState.current.mouse.gridX,
+          mouseY: curveState.current.mouse.gridY,
+        });
+      } else {
+        eventManager.trigger("onMouseMove", {
+          state: curveState.current,
+          deltaX,
+          deltaY,
+          mouseX: curveState.current.mouse.gridX,
+          mouseY: curveState.current.mouse.gridY,
+        });
+      }
+    });
+
+    canvas2d.addEventListener("wheel", (event) => {
+      if (!curveState.current) {
+        return;
+      }
+      event.preventDefault();
+      eventManager.trigger("onWheel", {
+        state: curveState.current,
+        deltaScroll: event.deltaY,
+      });
+    });
+
     render();
   };
 
@@ -316,89 +385,7 @@ export function Curve2D({
         setCursor,
       }}
     >
-      <div
-        className="relative"
-        onMouseDown={() => {
-          if (!curveState.current) {
-            return;
-          }
-          curveState.current._isDragging = true;
-          eventManager.trigger(
-            "onMouseDown",
-            {
-              mouseX: curveState.current.mouse.gridX,
-              mouseY: curveState.current.mouse.gridY,
-            },
-            render
-          );
-        }}
-        onMouseUp={() => {
-          if (!curveState.current) {
-            return;
-          }
-          if (curveState.current._isDragging) {
-            eventManager.trigger(
-              "endDrag",
-              {
-                mouseX: curveState.current.mouse.gridX,
-                mouseY: curveState.current.mouse.gridY,
-              },
-              render
-            );
-            curveState.current._isDragging = false;
-          }
-        }}
-        onMouseMove={(event) => {
-          if (!curveState.current) {
-            return;
-          }
-          setCursor("pointer");
-          const [lastX, lastY] = curveState.current._lastMousePos;
-          curveState.current._lastMousePos = [event.clientX, event.clientY];
-          const deltaX = event.clientX - lastX;
-          const deltaY = event.clientY - lastY;
-          updateMousePos(curveState.current);
-
-          if (curveState.current._isDragging) {
-            eventManager.trigger(
-              "onDrag",
-              {
-                deltaX,
-                deltaY,
-                mouseX: curveState.current.mouse.gridX,
-                mouseY: curveState.current.mouse.gridY,
-              },
-              render
-            );
-          } else {
-            eventManager.trigger(
-              "onMouseMove",
-              {
-                deltaX,
-                deltaY,
-                mouseX: curveState.current.mouse.gridX,
-                mouseY: curveState.current.mouse.gridY,
-              },
-              render
-            );
-          }
-        }}
-        ref={(r) => {
-          // have to do this roundabout way because standard react event
-          // handlers are passive and don't allow preventDefault.
-          r?.addEventListener("wheel", (event) => {
-            if (!curveState.current) {
-              return;
-            }
-            event.preventDefault();
-            eventManager.trigger(
-              "onWheel",
-              { deltaScroll: event.deltaY },
-              render
-            );
-          });
-        }}
-      >
+      <div className="relative">
         {Children.map(
           children,
           (child, i) =>

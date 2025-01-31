@@ -7,8 +7,11 @@ export function drawCircle(
   radius: number = 5
 ) {
   const { ctx2d, dpiratio: ratio } = state;
+  ctx2d.shadowBlur = 3;
+  ctx2d.shadowColor = "gray";
   ctx2d.fillStyle = "white";
   ctx2d.strokeStyle = "black";
+  ctx2d.lineWidth = 1;
   ctx2d.beginPath();
   ctx2d.arc(canvasX / ratio, canvasY / ratio, radius, 0, 2 * Math.PI);
   ctx2d.fill();

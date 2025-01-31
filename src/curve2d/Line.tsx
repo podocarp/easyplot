@@ -1,54 +1,72 @@
 import { useContext, useEffect, useRef } from "react";
-import { Curve2DMark } from "./Mark";
-import { Curve2DCurveGeneric } from "./CurveGeneric";
 import { Curve2DContext, Curve2DState } from "./Base";
+import {
+  Curve2DCommonConfigurations,
+  Curve2DCurveGeneric,
+} from "./CurveGeneric";
+
+type Coord = [number, number] | React.RefObject<[number, number]>;
 
 export function Curve2DLineSegment({
+  /** The start coordinate to draw from in grid units. If you pass a ref to
+   * both `from` and `to`, the curve will update in the next rerender. Will not
+   * work if only one of them is a ref.*/
   from,
+  /** The end coordinate to draw from in grid units. If you pass a ref to
+   * both `from` and `to`, the curve will update in the next rerender. Will not
+   * work if only one of them is a ref.*/
   to,
-  color,
-  fromLabel,
-  toLabel,
+  config,
   _id,
 }: {
-  from: [number, number];
-  to: [number, number];
-  color?: [number, number, number, number];
-  fromLabel?: string;
-  toLabel?: string;
+  from: Coord;
+  to: Coord;
+  config?: Curve2DCommonConfigurations;
   _id?: number;
 }) {
-  const points = useRef<number[]>([from[0], from[1], to[0], to[1]]);
-  const id = `curve-lineseg-${_id}`;
+  let defaultPoints: number[] | React.RefObject<[number, number]>[] = [];
+  if ("current" in from && "current" in to) {
+    defaultPoints = [from, to];
+  }
+  if ("current" in to !== "current" in from) {
+    if ("current" in to) {
+      defaultPoints[0] = to.current[0];
+      defaultPoints[1] = to.current[1];
+    } else {
+      defaultPoints[0] = to[0];
+      defaultPoints[1] = to[1];
+    }
+    if ("current" in from) {
+      defaultPoints[2] = from.current[0];
+      defaultPoints[3] = from.current[1];
+    } else {
+      defaultPoints[2] = from[0];
+      defaultPoints[3] = from[1];
+    }
 
+    console.warn(
+      "Passing only one ref to Curve2DLineSegment will not allow it to update on change."
+    );
+  }
+  const id = `curve-lineseg-${_id}`;
   return (
     <>
-      {fromLabel && (
-        <Curve2DMark
-          x={from[0]}
-          y={from[1]}
-          _id={`mark-1-${id}`}
-          text={fromLabel}
-        />
-      )}
-      {toLabel && (
-        <Curve2DMark x={to[0]} y={to[1]} _id={`mark-2-${id}`} text={toLabel} />
-      )}
-      <Curve2DCurveGeneric points={points} color={color} id={id} />
+      <Curve2DCurveGeneric {...config} points={defaultPoints} id={id} />
     </>
   );
 }
 
+/** Draws a straght line given by the vector equation: start + t * dir, with t
+ * in [0, infty]. */
 export function Curve2DRay({
   from,
   dir,
-  color,
-  fromLabel,
+  config,
   _id,
 }: {
   from: [number, number];
   dir: [number, number];
-  color?: [number, number, number, number];
+  config?: Curve2DCommonConfigurations;
   fromLabel?: string;
   _id?: number;
 }) {
@@ -70,32 +88,26 @@ export function Curve2DRay({
 
   return (
     <>
-      {fromLabel && (
-        <Curve2DMark
-          x={from[0]}
-          y={from[1]}
-          _id={`mark-1-${id}`}
-          text={fromLabel}
-        />
-      )}
-      <Curve2DCurveGeneric points={points} color={color} id={id} />
+      <Curve2DCurveGeneric {...config} points={points} id={id} />
     </>
   );
 }
 
+/** Draws a straight line given by the vector equation: start + t * dir, with t
+ * in [-infty, infty]. */
 export function Curve2DLine({
   from,
   dir,
-  color,
+  config,
   _id,
 }: {
   from: [number, number];
   dir: [number, number];
-  color?: [number, number, number, number];
+  config?: Curve2DCommonConfigurations;
   _id?: number;
 }) {
   const ctx = useContext(Curve2DContext);
-  const points = useRef<number[]>([from[0], from[1], 0, 0]);
+  const points = useRef<number[]>([0, 0, 0, 0]);
   const id = `curve-lineseg-${_id}`;
 
   const factory = (state: Curve2DState) => {
@@ -115,7 +127,7 @@ export function Curve2DLine({
 
   return (
     <>
-      <Curve2DCurveGeneric points={points} color={color} id={id} />
+      <Curve2DCurveGeneric {...config} points={points} id={id} />
     </>
   );
 }

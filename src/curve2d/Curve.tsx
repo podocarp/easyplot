@@ -1,17 +1,18 @@
 import { useContext, useEffect, useRef } from "react";
 import { Curve2DContext, Curve2DState } from "./Base";
-import { Curve2DCurveGeneric } from "./CurveGeneric";
+import {
+  Curve2DCommonConfigurations,
+  Curve2DCurveGeneric,
+} from "./CurveGeneric";
 
 export function Curve2DCurve({
   fun,
-  color,
-  hover = true,
+  config,
   _id,
 }: {
   /** The function to plot. */
   fun: (x: number) => number;
-  color?: [number, number, number, number];
-  hover?: boolean;
+  config?: Curve2DCommonConfigurations;
   _id?: number;
 }) {
   const ctx = useContext(Curve2DContext);
@@ -61,7 +62,5 @@ export function Curve2DCurve({
     ctx.registerRender(id, 10, factory);
   });
 
-  return (
-    <Curve2DCurveGeneric points={points} color={color} hover={hover} id={id} />
-  );
+  return <Curve2DCurveGeneric points={points} id={id} {...config} />;
 }

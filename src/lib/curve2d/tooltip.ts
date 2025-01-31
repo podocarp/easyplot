@@ -16,6 +16,7 @@ export function drawTooltip(
   ctx2d.textAlign = "left";
   ctx2d.font = "14px sans-serif";
   ctx2d.textBaseline = "top";
+  ctx2d.lineWidth = 2;
   const tooltipWidth = ctx2d.measureText(text).width + 2 * padding;
   const tooltipHeight = 14 * 1.3 + 2 * padding; // this seems to work fine
 
@@ -39,11 +40,12 @@ export function drawMarker(
   state: Curve2DState,
   text: string,
   canvasX: number,
-  canvasY: number
+  canvasY: number,
+  align: "left" | "center" = "center"
 ) {
   const { ctx2d, dpiratio: ratio } = state;
   ctx2d.font = "12px sans-serif";
-  ctx2d.textAlign = "center";
+  ctx2d.textAlign = align;
   ctx2d.textBaseline = "middle";
 
   const x = canvasX / ratio;
