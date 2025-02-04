@@ -12,15 +12,12 @@ export enum EventHandlerOptions {
   /** Stops any other event handlers from being called. The default handler will
    * still be called. */
   stopPropagation = 1 << 2,
-  /** Denotes that no useful work was done by this event handler and it should
-   * be treated as if it were not called. */
-  nothingDone = 1 << 3,
 }
 
 export class EventsManager<T = void> {
   private eventHandlers: Map<Event, Map<string, EventHandler<T>>> = new Map();
   private defaultHandlers: Map<Event, EventHandler<T>> = new Map();
-  private callback: EventHandler<T>;
+  private observer: EventHandler<T> | undefined;
 
   /** Registers a new event listener. An event listener can return `true` to
    * preventDefault. */
@@ -37,8 +34,10 @@ export class EventsManager<T = void> {
     this.defaultHandlers.set(event, defaultHandler);
   }
 
-  setCallback(callback: EventHandler<T>) {
-    this.callback = callback;
+  /** The observer is a function that will be called once before any listeners
+   * are triggered. */
+  setObserver(callback: EventHandler<T>) {
+    this.observer = callback;
   }
 
   /** Clears all event handlers but not the default event handlers. If you want
@@ -60,20 +59,16 @@ export class EventsManager<T = void> {
    * handlers were called, will also call `callback` if provided. */
   trigger(event: Event, arg: T) {
     let preventDefault = false;
-    let called = false;
     const handlers = this.eventHandlers.get(event);
     if (handlers) {
+      if (this.observer) {
+        this.observer(arg);
+      }
+
       for (const handler of handlers.values()) {
         const res = handler(arg);
         if (typeof res !== "number") {
-          called = true;
           continue;
-        }
-        if (
-          (res & EventHandlerOptions.nothingDone) !==
-          EventHandlerOptions.nothingDone
-        ) {
-          called = true;
         }
         if (
           (res & EventHandlerOptions.preventDefault) ===
@@ -93,13 +88,8 @@ export class EventsManager<T = void> {
     if (!preventDefault) {
       const handler = this.defaultHandlers.get(event);
       if (handler) {
-        called = true;
         handler(arg);
       }
-    }
-
-    if (called && this.callback) {
-      this.callback(arg);
     }
   }
 }

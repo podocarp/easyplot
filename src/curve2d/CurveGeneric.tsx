@@ -288,12 +288,11 @@ export function Curve2DCurveGeneric({
     if (hover) {
       ctx.registerEventHandler("onMouseMove", `${key}-hover`, ({ state }) => {
         if (ctx.state.current === undefined) {
-          return EventHandlerOptions.nothingDone;
+          return;
         }
-        if (!tryHover(state, toPoints(points))) {
-          return EventHandlerOptions.nothingDone;
+        if (tryHover(state, toPoints(points))) {
+          return EventHandlerOptions.stopPropagation;
         }
-        return EventHandlerOptions.stopPropagation;
       });
     }
   });

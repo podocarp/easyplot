@@ -2,7 +2,6 @@ import { drawCircle } from "@/lib/curve2d/circle";
 import { gridUnitsToScreenSpace } from "@/lib/curve2d/coords";
 import { binSearchPointX } from "@/lib/curve2d/points";
 import { drawTooltip } from "@/lib/curve2d/tooltip";
-import { EventHandlerOptions } from "@/lib/events";
 import { useContext, useEffect } from "react";
 import { createProgram } from "../lib/gl";
 import { Curve2DContext, Curve2DState } from "./Base";
@@ -105,11 +104,8 @@ export function Curve2DVerticalCursor() {
       "onMouseMove",
       "cursor-vert-mousemove",
       ({ mouseX }) => {
-        if (mouseX === undefined) {
-          return EventHandlerOptions.nothingDone;
-        }
-        if (lastMouseX === mouseX) {
-          return EventHandlerOptions.nothingDone;
+        if (mouseX === undefined || lastMouseX === mouseX) {
+          return;
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
         lastMouseX = mouseX;

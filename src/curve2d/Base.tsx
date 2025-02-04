@@ -254,8 +254,8 @@ export function Curve2D({
     ctx2d.clearRect(0, 0, ctx2d.canvas.width, ctx2d.canvas.height);
     ctx2d.fillStyle = "black";
     ctx2d.fillRect(0, 0, 1, 1);
-
     painter.render(curveState.current);
+    gl.flush();
   };
 
   const init = () => {
@@ -305,7 +305,7 @@ export function Curve2D({
     };
     updateCanvasRange(curveState.current);
 
-    eventManager.setCallback(render);
+    eventManager.setObserver(render);
     canvas2d.addEventListener("mouseup", () => {
       if (!curveState.current) {
         return;

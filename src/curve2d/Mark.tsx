@@ -135,7 +135,7 @@ export function Curve2DMark({
   let isDragging = false;
   const handleDrag = () => {
     if (state.current === undefined) {
-      return EventHandlerOptions.nothingDone;
+      return;
     }
 
     const { canvasX, canvasY } = state.current.mouse;
@@ -165,13 +165,10 @@ export function Curve2DMark({
         EventHandlerOptions.preventDefault | EventHandlerOptions.stopPropagation
       );
     }
-
-    return EventHandlerOptions.nothingDone;
   };
 
   const endDrag = () => {
     isDragging = false;
-    return EventHandlerOptions.nothingDone;
   };
 
   const handleMouse = () => {

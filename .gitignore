@@ -131,3 +131,4 @@ out
 .direnv
 dist
 src/dist
+docs/.source
